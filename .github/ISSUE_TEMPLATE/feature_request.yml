@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a user-visible improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the concrete task or frustration.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should the user be able to achieve?
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Single-HTML and offline considerations
+      description: Note required file types, size, mobile gestures, exports, or dependencies.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance examples
+      description: Give specific inputs and expected results.

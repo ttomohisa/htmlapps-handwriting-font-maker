@@ -1,0 +1,92 @@
+<!--
+  Preset + custom numeric setting field.
+  Custom input shows the allowed range unobtrusively. It does not clamp while typing;
+  normalization happens on change/blur.
+-->
+<style>
+  .app-setting-field { display: grid; gap: 8px; }
+  .app-setting-label { font-size: 12px; font-weight: 760; }
+  .app-setting-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .app-setting-preset {
+    min-height: 36px; padding: 6px 10px; border: 1px solid var(--line, #dadbd6); border-radius: 9px;
+    background: var(--surface, #fff); color: var(--text, #20211f); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .app-setting-preset[aria-pressed="true"] { border-color: var(--accent, #16624f); background: var(--accent-soft, #e1f0ea); color: var(--accent, #16624f); }
+  .app-setting-custom { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px; max-width: 250px; }
+  .app-setting-custom[hidden] { display: none; }
+  .app-setting-input { width: 100%; min-height: 40px; padding: 7px 10px; border: 1px solid var(--line, #dadbd6); border-radius: 9px; background: var(--surface, #fff); font: inherit; }
+  .app-setting-unit { color: var(--muted, #666963); font-size: 12px; }
+  .app-setting-range { grid-column: 1 / -1; margin-top: -3px; color: var(--muted, #666963); font-size: 10px; }
+  .app-setting-error { grid-column: 1 / -1; color: var(--danger, #b3261e); font-size: 11px; }
+  .app-setting-error:empty { display: none; }
+</style>
+
+<div class="app-setting-field" data-setting-field>
+  <span class="app-setting-label">横幅</span>
+  <div class="app-setting-presets">
+    <button class="app-setting-preset" type="button" data-setting-preset="480" aria-pressed="false">480</button>
+    <button class="app-setting-preset" type="button" data-setting-preset="720" aria-pressed="true">720</button>
+    <button class="app-setting-preset" type="button" data-setting-preset="1080" aria-pressed="false">1080</button>
+    <button class="app-setting-preset" type="button" data-setting-custom-trigger aria-pressed="false">自由入力</button>
+  </div>
+  <div class="app-setting-custom" data-setting-custom hidden>
+    <input class="app-setting-input" data-setting-input type="number" min="320" max="3840" step="2" value="720" inputmode="numeric">
+    <span class="app-setting-unit">px</span>
+    <span class="app-setting-range" data-setting-range></span>
+    <span class="app-setting-error" data-setting-error role="status"></span>
+  </div>
+</div>
+
+<script>
+  (() => {
+    function init(root, { onChange = null, invalidMessage = '範囲内の値を入力してください' } = {}) {
+      const presetButtons = [...root.querySelectorAll('[data-setting-preset]')];
+      const customTrigger = root.querySelector('[data-setting-custom-trigger]');
+      const custom = root.querySelector('[data-setting-custom]');
+      const input = root.querySelector('[data-setting-input]');
+      const range = root.querySelector('[data-setting-range]');
+      const error = root.querySelector('[data-setting-error]');
+      if (!customTrigger || !custom || !input) throw new Error('Setting field markup is incomplete.');
+
+      const min = input.min === '' ? null : Number(input.min);
+      const max = input.max === '' ? null : Number(input.max);
+      if (range) range.textContent = min != null && max != null ? `${min}–${max}` : min != null ? `${min}+` : max != null ? `≤ ${max}` : '';
+
+      function emit(value, source) {
+        root.dispatchEvent(new CustomEvent('settingchange', { bubbles: true, detail: { value, source } }));
+        if (typeof onChange === 'function') onChange(value, source);
+      }
+      function select(button) {
+        [...presetButtons, customTrigger].forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      }
+      function normalize() {
+        if (input.value === '') { if (error) error.textContent = invalidMessage; return null; }
+        let value = Number(input.value);
+        if (!Number.isFinite(value)) { if (error) error.textContent = invalidMessage; return null; }
+        if (min != null) value = Math.max(min, value);
+        if (max != null) value = Math.min(max, value);
+        if (input.step && input.step !== 'any') {
+          const step = Number(input.step);
+          if (Number.isFinite(step) && step > 0) { const base = min ?? 0; value = base + Math.round((value - base) / step) * step; if (min != null) value = Math.max(min, value); if (max != null) value = Math.min(max, value); }
+        }
+        input.value = String(value);
+        if (error) error.textContent = '';
+        return value;
+      }
+
+      presetButtons.forEach(button => button.addEventListener('click', () => {
+        const value = Number(button.dataset.settingPreset);
+        select(button); custom.hidden = true; input.value = String(value); if (error) error.textContent = ''; emit(value, 'preset');
+      }));
+      customTrigger.addEventListener('click', () => {
+        select(customTrigger); custom.hidden = false; requestAnimationFrame(() => input.focus({ preventScroll: true }));
+      });
+      input.addEventListener('input', () => { if (error) error.textContent = ''; });
+      input.addEventListener('change', () => { const value = normalize(); if (value != null) emit(value, 'custom'); });
+      input.addEventListener('blur', normalize);
+      return Object.freeze({ normalize, getValue: () => Number(input.value) });
+    }
+
+    window.AppSettingField = Object.freeze({ init, initAll: () => [...document.querySelectorAll('[data-setting-field]')].map(root => init(root)) });
+  })();
+</script>

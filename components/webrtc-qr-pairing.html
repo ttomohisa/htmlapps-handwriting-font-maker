@@ -1,0 +1,504 @@
+<!--
+Reusable WebRTC QR pairing component
+====================================
+
+Purpose
+- Fully serverless WebRTC pairing for two browsers on the same reachable LAN.
+- Manual signaling only: Offer/Answer travel by QR code or copy/paste.
+- No signaling server, STUN, TURN, WebSocket, or runtime API.
+- Robust ICE collection, connection diagnostics, QR chunking, low-resolution camera fallback,
+  delayed Answer creation, stale-attempt cleanup, and pre-connect Answer regeneration.
+
+Required embedded dependencies
+- qrcode-generator 1.4.4 (global: qrcode)
+- jsqr 1.4.0 (global: jsQR) as a fallback when BarcodeDetector is unavailable
+
+Copy the entries from examples/dependencies.webrtc-qr.json into the target app's dependencies.json, then run scripts/sync-dependency-lock.ps1.
+This component expects the template's window.StandaloneAssets API.
+
+Basic usage
+  <div id="peerPairing"></div>
+  <script>
+    const pairing = AppWebRtcQrPairing.mount(document.getElementById('peerPairing'), {
+      language: 'ja',
+      onConnected({ role, channel }) {
+        console.log('connected as', role);
+        channel.send('hello');
+      },
+      onMessage({ data }) {
+        console.log('peer says', data);
+      }
+    });
+  </script>
+
+Apps that need custom/unreliable channels can set createDefaultChannel:false and use onPeerCreated.
+See docs/WEBRTC_QR_PAIRING.ja.md / docs/WEBRTC_QR_PAIRING.md.
+-->
+<style>
+  .app-webrtc-pairing {
+    --webrtc-bg: var(--surface, #fff);
+    --webrtc-muted-bg: var(--surface-muted, #f2f3ef);
+    --webrtc-hover: var(--surface-hover, #e9ebe5);
+    --webrtc-text: var(--text, #20211f);
+    --webrtc-muted: var(--muted, #666963);
+    --webrtc-line: var(--line, #dadbd6);
+    --webrtc-line-strong: var(--line-strong, #bfc1ba);
+    --webrtc-accent: var(--accent, #16624f);
+    --webrtc-accent-soft: var(--accent-soft, #e1f0ea);
+    --webrtc-warning-soft: var(--warning-soft, #fff5d8);
+    --webrtc-warning: #765000;
+    color: var(--webrtc-text);
+  }
+  .app-webrtc-pairing * { box-sizing: border-box; }
+  .app-webrtc-role-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .app-webrtc-role-card { min-height:118px; padding:16px; border:1px solid var(--webrtc-line); border-radius:14px; background:var(--webrtc-bg); text-align:left; cursor:pointer; }
+  .app-webrtc-role-card:hover { border-color:var(--webrtc-line-strong); background:var(--webrtc-hover); }
+  .app-webrtc-role-card strong { display:block; margin-bottom:5px; font-size:15px; }
+  .app-webrtc-role-card span { display:block; color:var(--webrtc-muted); font-size:12px; line-height:1.55; }
+  .app-webrtc-panel { padding:16px; border:1px solid var(--webrtc-line); border-radius:16px; background:var(--webrtc-bg); }
+  .app-webrtc-panel + .app-webrtc-panel { margin-top:12px; }
+  .app-webrtc-panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .app-webrtc-panel-head h3 { margin:0; font-size:17px; }
+  .app-webrtc-panel-head p { margin:4px 0 0; color:var(--webrtc-muted); font-size:12px; }
+  .app-webrtc-steps { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px; }
+  .app-webrtc-step { display:inline-flex; align-items:center; gap:6px; min-height:30px; padding:5px 9px; border:1px solid var(--webrtc-line); border-radius:999px; background:var(--webrtc-muted-bg); color:var(--webrtc-muted); font-size:11px; font-weight:750; }
+  .app-webrtc-step strong { display:grid; place-items:center; width:18px; height:18px; border-radius:50%; background:var(--webrtc-line); color:var(--webrtc-text); font-size:10px; }
+  .app-webrtc-step.is-active { border-color:color-mix(in srgb,var(--webrtc-accent) 35%,var(--webrtc-line)); background:var(--webrtc-accent-soft); color:var(--webrtc-accent); }
+  .app-webrtc-step.is-active strong,.app-webrtc-step.is-done strong { background:var(--webrtc-accent); color:#fff; }
+  .app-webrtc-step.is-done { color:var(--webrtc-accent); }
+  .app-webrtc-warning { padding:10px 11px; border:1px solid #e5c675; border-radius:10px; background:var(--webrtc-warning-soft); color:var(--webrtc-warning); font-size:11px; line-height:1.55; }
+  .app-webrtc-coach { display:grid; gap:3px; margin-top:10px; padding:10px 11px; border:1px solid color-mix(in srgb,var(--webrtc-accent) 24%,var(--webrtc-line)); border-radius:10px; background:var(--webrtc-accent-soft); }
+  .app-webrtc-coach strong { color:var(--webrtc-accent); font-size:12px; }
+  .app-webrtc-coach span { color:var(--webrtc-muted); font-size:10px; line-height:1.5; }
+  .app-webrtc-coach[data-tone="warning"] { border-color:#e5c675; background:var(--webrtc-warning-soft); }
+  .app-webrtc-coach[data-tone="warning"] strong { color:var(--webrtc-warning); }
+  .app-webrtc-status { display:flex; align-items:center; gap:8px; min-height:30px; margin:8px 0; color:var(--webrtc-muted); font-size:12px; }
+  .app-webrtc-status-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:var(--webrtc-line-strong); box-shadow:0 0 0 3px var(--webrtc-muted-bg); }
+  .app-webrtc-status-dot[data-tone="active"] { background:var(--webrtc-accent); box-shadow:0 0 0 3px var(--webrtc-accent-soft); }
+  .app-webrtc-status-dot[data-tone="warning"] { background:#c4861a; box-shadow:0 0 0 3px var(--webrtc-warning-soft); }
+  .app-webrtc-button-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .app-webrtc-button { min-height:38px; padding:7px 11px; border:1px solid var(--webrtc-line); border-radius:10px; background:var(--webrtc-bg); color:var(--webrtc-text); font:inherit; font-size:12px; font-weight:750; cursor:pointer; }
+  .app-webrtc-button:hover { border-color:var(--webrtc-line-strong); background:var(--webrtc-hover); }
+  .app-webrtc-button.primary { border-color:var(--webrtc-accent); background:var(--webrtc-accent); color:#fff; }
+  .app-webrtc-button:disabled { opacity:.45; cursor:not-allowed; }
+  .app-webrtc-button.small { min-height:34px; padding:5px 9px; font-size:11px; }
+  .app-webrtc-field { display:grid; gap:5px; }
+  .app-webrtc-field label { color:var(--webrtc-muted); font-size:11px; font-weight:750; }
+  .app-webrtc-field textarea,.app-webrtc-field select { width:100%; border:1px solid var(--webrtc-line); border-radius:10px; background:#fbfbf9; color:var(--webrtc-text); font:inherit; }
+  .app-webrtc-field textarea { min-height:105px; padding:9px 10px; resize:vertical; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:10px; line-height:1.45; word-break:break-all; }
+  .app-webrtc-field select { min-height:38px; padding:7px 9px; }
+  .app-webrtc-details { margin-top:10px; }
+  .app-webrtc-details summary { color:var(--webrtc-muted); font-size:11px; font-weight:750; cursor:pointer; }
+  .app-webrtc-details-body { display:grid; gap:9px; margin-top:8px; }
+  .app-webrtc-grid { display:grid; grid-template-columns:minmax(240px,.85fr) minmax(0,1.15fr); gap:14px; align-items:start; margin-top:12px; }
+  .app-webrtc-qr-wrap { display:grid; justify-items:center; gap:8px; min-height:280px; padding:12px; border:1px dashed var(--webrtc-line-strong); border-radius:13px; background:#fbfbf9; }
+  .app-webrtc-qr { width:min(100%,320px); aspect-ratio:1; display:grid; place-items:center; overflow:hidden; border-radius:9px; background:#fff; }
+  .app-webrtc-qr svg { width:100%; height:100%; display:block; }
+  .app-webrtc-qr-placeholder { max-width:220px; color:var(--webrtc-muted); text-align:center; font-size:11px; line-height:1.5; }
+  .app-webrtc-qr-meta { display:flex; align-items:center; justify-content:center; gap:7px; min-height:22px; color:var(--webrtc-muted); font-size:10px; }
+  .app-webrtc-qr-meta strong { color:var(--webrtc-text); font-variant-numeric:tabular-nums; }
+  .app-webrtc-scan { position:relative; overflow:hidden; min-height:260px; border-radius:13px; background:#111; }
+  .app-webrtc-scan video { width:100%; min-height:260px; max-height:52vh; object-fit:cover; display:block; background:#111; }
+  .app-webrtc-scan-guide { pointer-events:none; position:absolute; inset:12% 16%; border:3px solid rgba(255,255,255,.9); border-radius:18px; box-shadow:0 0 0 999px rgba(0,0,0,.2); }
+  .app-webrtc-scan-guide::after { content:''; position:absolute; inset:11px; border:1px dashed rgba(255,255,255,.5); border-radius:10px; }
+  .app-webrtc-scan-meta { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:7px; margin-top:7px; color:var(--webrtc-muted); font-size:10px; }
+  .app-webrtc-scan-progress { color:var(--webrtc-accent); font-weight:800; }
+  .app-webrtc-scan-chunks { display:flex; flex-wrap:wrap; gap:5px; min-height:7px; margin-top:6px; }
+  .app-webrtc-scan-chunk { width:18px; height:5px; border-radius:999px; background:var(--webrtc-line-strong); }
+  .app-webrtc-scan-chunk.is-done { background:var(--webrtc-accent); }
+  .app-webrtc-diagnostic { margin-top:8px; padding:9px 10px; border-radius:9px; background:var(--webrtc-muted-bg); color:var(--webrtc-muted); font-size:10px; white-space:pre-line; line-height:1.55; }
+  .app-webrtc-diagnostic.is-warning { background:var(--webrtc-warning-soft); color:var(--webrtc-warning); }
+  .app-webrtc-fullscreen { position:fixed; inset:0; z-index:999; display:grid; place-items:center; padding:16px; background:rgba(10,12,11,.92); }
+  .app-webrtc-fullscreen[hidden] { display:none; }
+  .app-webrtc-fullscreen-card { width:min(96vw,560px); display:grid; justify-items:center; gap:11px; padding:15px; border-radius:18px; background:#fff; color:#151815; box-shadow:0 24px 80px rgba(0,0,0,.38); }
+  .app-webrtc-fullscreen-card .app-webrtc-qr { width:min(88vw,500px); }
+  .app-webrtc-connected { padding:14px; border:1px solid color-mix(in srgb,var(--webrtc-accent) 28%,var(--webrtc-line)); border-radius:13px; background:var(--webrtc-accent-soft); }
+  .app-webrtc-connected strong { color:var(--webrtc-accent); }
+  .app-webrtc-helper { margin-top:6px; color:var(--webrtc-muted); font-size:10px; line-height:1.5; }
+  @media (max-width: 700px) {
+    .app-webrtc-role-grid,.app-webrtc-grid { grid-template-columns:1fr; }
+    .app-webrtc-panel { padding:13px; }
+    .app-webrtc-qr-wrap { min-height:0; }
+    .app-webrtc-button { min-height:44px; }
+    .app-webrtc-scan,.app-webrtc-scan video { min-height:240px; }
+  }
+</style>
+<script>
+(() => {
+  'use strict';
+  if (window.AppWebRtcQrPairing) return;
+
+  const COPY = {
+    ja: {
+      chooseTitle:'接続する役割を選ぶ', chooseBody:'2台のブラウザーをQRで直接つなぎます。接続情報もサーバーを経由しません。',
+      hostTitle:'ホスト側', hostBody:'接続QRを表示し、参加端末から返答QRを読み取ります。',
+      joinTitle:'参加端末', joinBody:'ホストのQRをカメラで読み取り、返答QRを表示します。',
+      sameLan:'STUN/TURN/シグナリングサーバーを使わないため、基本的に同じWi-Fi / LAN上で使います。ゲストWi-Fi、端末分離、VPN、ファイアウォール等で直接通信できない場合は接続できません。',
+      changeRole:'役割を変更', stepOffer:'接続情報', stepAnswer:'返答', stepConnect:'接続',
+      hostConnectTitle:'端末と接続', hostConnectBody:'接続QRを相手へ渡し、返答QRを読み取ります。',
+      hostCoachOfferTitle:'1. 相手端末でこのQRを読む', hostCoachOfferBody:'接続QRは自動生成・自動切替します。相手側は参加端末を選ぶとカメラが開きます。',
+      hostCoachAnswerTitle:'2. 返答QRの読み取りカメラを先に開く', hostCoachAnswerBody:'カメラ映像が表示されたら、相手端末で返答QRを作ります。',
+      hostCoachCheckingTitle:'3. 接続を確認中', hostCoachCheckingBody:'返答を適用しました。候補ペアが確立するまでそのまま待ちます。',
+      hostCoachSlowTitle:'接続確認に時間がかかっています', hostCoachSlowBody:'QR受け渡しのタイムアウトではありません。候補ペアを確立できるか確認しています。',
+      hostCoachFailedTitle:'接続経路を確立できませんでした', hostCoachFailedBody:'新しい接続QRを作って再試行してください。診断欄も確認してください。',
+      createOffer:'接続QRを作り直す', copyOffer:'接続コードをコピー', offerPlaceholder:'接続QRを準備しています…', qrAuto:'QRは自動で切り替わります', prev:'前へ', next:'次へ', fullscreen:'全画面', close:'閉じる',
+      scanAnswer:'返答QRをカメラで読む', scanAnswerHint:'このカメラを先に起動し、映像が表示されたら相手端末で返答QRを作ります。',
+      camera:'カメラ', stopCamera:'カメラを止める', scanStart:'QRを枠いっぱいに映してください', scanReady:'カメラ準備完了。相手端末で返答QRを作ってください。', resolution:'{width} × {height}',
+      pagesReady:'{total}枚のQRを読み取ります', chunks:'{read} / {total} 枚取得',
+      manualOffer:'QRを使わず手動で渡す', offerCode:'接続コード',
+      manualAnswer:'QRを使えない場合は返答コードを貼り付ける', answerCode:'返答コード', applyAnswer:'返答を適用',
+      joinConnectTitle:'ホストへ接続', joinConnectBody:'カメラでホスト画面のQRを読み取ります。',
+      joinCoachScanTitle:'1. ホストのQRを読み取る', joinCoachScanBody:'参加端末を選ぶとカメラを自動で開きます。ホスト画面のQRを枠へ入れてください。',
+      joinCoachPrepareTitle:'2. ホスト側の返答QRスキャナーを先に準備', joinCoachPrepareBody:'ホストで返答QRカメラを開き、映像が出てから返答QRを作ります。ここまではICE確認を開始しません。',
+      joinCoachAnswerTitle:'3. 返答QRをホストへ見せる', joinCoachAnswerBody:'ホスト側カメラへこのQRを向けます。接続前にICE失敗した場合は新しい返答QRへ自動更新します。',
+      joinCoachFailedTitle:'接続できませんでした', joinCoachFailedBody:'ホストの新しい接続QRからやり直してください。',
+      scanOffer:'ホストのQRをカメラで読む', scanOfferFound:'接続QRを読み取りました', scanAnswerFound:'返答QRを読み取りました',
+      manualOfferReceive:'QRを使えない場合は接続コードを貼り付ける', useOffer:'接続情報を使う',
+      prepareTitle:'ホスト側の返答QRスキャナーを先に準備してください', prepareBody:'ホストで「返答QRをカメラで読む」を押し、カメラ映像が表示されたら下のボタンを押します。', createAnswer:'ホスト側の準備ができた — 返答QRを作る',
+      creatingOffer:'接続情報を作成中…', creatingAnswer:'返答を作成中…', regeneratingAnswer:'返答QRを更新中…', waitingIce:'LAN接続候補を収集中…', offerReady:'接続QRの準備ができました', answerReady:'返答QRの準備ができました', checking:'接続確認中…', connected:'接続しました', disconnected:'一時的に切断されました。復帰を待っています…', failed:'接続できませんでした', closed:'接続を終了しました',
+      retryExhausted:'返答QRの自動更新を3回試しました。ホストのカメラを開いたまま、もう一度「返答QRを作る」を押してください。',
+      answerAutoRetry:'接続前にICEが失敗したため、新しい返答QRへ自動更新します。',
+      copy:'コピー', copied:'コピーしました', copyFailed:'コピーできませんでした',
+      cameraUnsupported:'このブラウザーではカメラを利用できません。手動の接続コードを使ってください。', cameraFailed:'カメラを開始できませんでした。権限とカメラ利用状況を確認してください。', qrFailed:'QRを生成できませんでした', invalidSignal:'接続情報を読み取れませんでした',
+      iceTimeout:'LAN接続候補の収集が15秒以内に完了しませんでした。不完全な接続情報は使わず、今回の試行を破棄しました。', noLocal:'この端末でLAN接続候補を取得できませんでした。', noRemote:'相手の接続情報にLAN接続候補がありません。', connectionClosed:'古い接続試行は破棄されました。',
+      diagGather:'ICE収集', diagLocal:'ローカル候補', diagRemote:'相手候補', diagIce:'ICE状態', diagPeer:'接続状態', diagPair:'候補ペア', diagNoPair:'まだ確立していません', diagNoLocal:'LAN接続候補がありません。ブラウザー/ネットワーク構成を確認してください。', diagNoRemote:'相手のLAN候補がありません。接続情報を作り直してください。', diagPairFailed:'候補は取得できましたが接続経路を確立できませんでした。mDNS、端末分離、VPN、ファイアウォールを確認してください。',
+      stateNew:'未開始', stateGathering:'収集中', stateComplete:'完了', stateChecking:'確認中', stateConnected:'接続済み', stateCompleted:'完了', stateConnecting:'接続確認中', stateDisconnected:'一時切断', stateFailed:'失敗', stateClosed:'終了',
+      connectedBody:'WebRTC接続が確立しました。DataChannelが開くとアプリデータを送れます。', disconnect:'切断', startOver:'新しい接続を開始'
+    },
+    en: {
+      chooseTitle:'Choose a role', chooseBody:'Pair two browsers directly with QR codes. Signaling data never goes through a server.',
+      hostTitle:'Host', hostBody:'Show an Offer QR, then scan the reply QR from the joining device.',
+      joinTitle:'Joining device', joinBody:'Scan the host QR and show a reply QR back to the host.',
+      sameLan:'No signaling server, STUN, or TURN is used, so the devices normally need to be reachable on the same Wi-Fi / LAN. Guest isolation, VPNs, firewalls, or client isolation can block the connection.',
+      changeRole:'Change role', stepOffer:'Connection info', stepAnswer:'Reply', stepConnect:'Connect',
+      hostConnectTitle:'Connect another device', hostConnectBody:'Hand the Offer QR to the other device, then scan its reply.',
+      hostCoachOfferTitle:'1. Scan this QR on the other device', hostCoachOfferBody:'The connection QR is generated and cycled automatically. Choosing the joining role opens its camera.',
+      hostCoachAnswerTitle:'2. Open the reply-QR camera first', hostCoachAnswerBody:'Once the camera preview is visible, create the reply QR on the joining device.',
+      hostCoachCheckingTitle:'3. Checking the connection', hostCoachCheckingBody:'The reply was applied. Keep the devices open while WebRTC selects a candidate pair.',
+      hostCoachSlowTitle:'Connection checking is taking longer', hostCoachSlowBody:'This is not a QR handoff timeout. WebRTC is still trying to establish a candidate pair.',
+      hostCoachFailedTitle:'Could not establish a direct route', hostCoachFailedBody:'Create a new connection QR and try again. Check the diagnostics below.',
+      createOffer:'Recreate connection QR', copyOffer:'Copy connection code', offerPlaceholder:'Preparing connection QR…', qrAuto:'QR pages cycle automatically', prev:'Previous', next:'Next', fullscreen:'Fullscreen', close:'Close',
+      scanAnswer:'Scan reply QR with camera', scanAnswerHint:'Open this camera first. Once the preview is visible, create the reply QR on the other device.',
+      camera:'Camera', stopCamera:'Stop camera', scanStart:'Fill the guide with the QR code', scanReady:'Camera ready. Create the reply QR on the other device now.', resolution:'{width} × {height}',
+      pagesReady:'Reading {total} QR pages', chunks:'{read} / {total} pages read',
+      manualOffer:'Pass the connection code manually instead', offerCode:'Connection code',
+      manualAnswer:'Paste the reply code when QR is unavailable', answerCode:'Reply code', applyAnswer:'Apply reply',
+      joinConnectTitle:'Connect to the host', joinConnectBody:'Scan the QR shown on the host device.',
+      joinCoachScanTitle:'1. Scan the host QR', joinCoachScanBody:'Choosing the joining role opens the camera automatically. Put the host QR inside the guide.',
+      joinCoachPrepareTitle:'2. Prepare the host reply scanner first', joinCoachPrepareBody:'Open the reply-QR camera on the host. Do not create the reply until its camera preview is visible.',
+      joinCoachAnswerTitle:'3. Show the reply QR to the host', joinCoachAnswerBody:'Point this QR at the host camera. If ICE fails before the host applies it, a fresh reply QR is generated automatically.',
+      joinCoachFailedTitle:'Could not connect', joinCoachFailedBody:'Start again from a fresh host connection QR.',
+      scanOffer:'Scan host QR with camera', scanOfferFound:'Connection QR read', scanAnswerFound:'Reply QR read',
+      manualOfferReceive:'Paste the connection code when QR is unavailable', useOffer:'Use connection info',
+      prepareTitle:'Prepare the reply-QR scanner on the host first', prepareBody:'On the host, open “Scan reply QR with camera”. Once the preview appears, press the button below.', createAnswer:'Host scanner is ready — create reply QR',
+      creatingOffer:'Creating connection info…', creatingAnswer:'Creating reply…', regeneratingAnswer:'Refreshing reply QR…', waitingIce:'Collecting LAN candidates…', offerReady:'Connection QR is ready', answerReady:'Reply QR is ready', checking:'Checking connection…', connected:'Connected', disconnected:'Temporarily disconnected. Waiting for recovery…', failed:'Connection failed', closed:'Connection closed',
+      retryExhausted:'The reply QR was refreshed three times. Keep the host camera open and press “create reply QR” again.', answerAutoRetry:'ICE failed before connection. Refreshing the reply QR automatically.',
+      copy:'Copy', copied:'Copied', copyFailed:'Could not copy',
+      cameraUnsupported:'This browser cannot use the camera here. Use the manual connection-code fallback.', cameraFailed:'Could not start the camera. Check permission and whether another app is using it.', qrFailed:'Could not generate QR code', invalidSignal:'Could not read the connection information',
+      iceTimeout:'LAN candidate gathering did not complete within 15 seconds. The incomplete attempt was discarded.', noLocal:'This device did not produce any LAN candidates.', noRemote:'The peer connection information contains no LAN candidates.', connectionClosed:'The old connection attempt was discarded.',
+      diagGather:'ICE gathering', diagLocal:'Local candidates', diagRemote:'Remote candidates', diagIce:'ICE state', diagPeer:'Connection state', diagPair:'Candidate pair', diagNoPair:'not established yet', diagNoLocal:'No LAN candidates were found. Check the browser and network configuration.', diagNoRemote:'The peer has no LAN candidates. Recreate the connection information.', diagPairFailed:'Candidates were found, but no direct route could be established. Check mDNS reachability, client isolation, VPNs, and firewalls.',
+      stateNew:'new', stateGathering:'gathering', stateComplete:'complete', stateChecking:'checking', stateConnected:'connected', stateCompleted:'completed', stateConnecting:'connecting', stateDisconnected:'disconnected', stateFailed:'failed', stateClosed:'closed',
+      connectedBody:'The WebRTC connection is established. Application data can flow once the DataChannel is open.', disconnect:'Disconnect', startOver:'Start a new connection'
+    }
+  };
+
+  const defaults = {
+    language: 'ja',
+    iceGatherTimeoutMs: 15000,
+    answerAutoRetryLimit: 3,
+    answerAutoRetryDelayMs: 900,
+    offerQrCycleMs: 1800,
+    answerQrCycleMs: 2200,
+    qrChunkSize: 175,
+    payloadPrefix: 'bkrtc1',
+    qrPrefix: 'bkrtcq1',
+    qrDependencyId: 'qrcode-generator',
+    qrAssetKey: 'qrcode',
+    decoderDependencyId: 'jsqr',
+    decoderAssetKey: 'decoder',
+    dataChannelLabel: 'app-data',
+    dataChannelInit: { ordered: true },
+    readyChannelLabel: null,
+    requireReadyChannelOpen: true,
+    createDefaultChannel: true,
+    autoStartJoinScanner: true,
+    notify: null,
+    onPeerCreated: null,
+    onChannel: null,
+    onConnected: null,
+    onDisconnected: null,
+    onMessage: null,
+    onStateChange: null
+  };
+
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const format = (text, vars={}) => String(text).replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
+  const randomSession = () => {
+    try { const a=new Uint32Array(2); crypto.getRandomValues(a); return Array.from(a,v=>v.toString(36)).join('').slice(0,10); }
+    catch { return Math.random().toString(36).slice(2,10); }
+  };
+
+  function mount(root, userOptions={}) {
+    if (!(root instanceof Element)) throw new TypeError('AppWebRtcQrPairing.mount(root): root must be an Element');
+    const options = { ...defaults, ...userOptions, dataChannelInit:{...defaults.dataChannelInit,...(userOptions.dataChannelInit||{})} };
+    const readyChannelLabel = String(options.readyChannelLabel || (options.createDefaultChannel !== false ? options.dataChannelLabel : '') || '').trim();
+    if (options.requireReadyChannelOpen !== false && !readyChannelLabel) {
+      throw new TypeError('AppWebRtcQrPairing.mount: readyChannelLabel is required when createDefaultChannel is false unless requireReadyChannelOpen is false');
+    }
+    let language = options.language === 'en' ? 'en' : 'ja';
+    const t = key => COPY[language]?.[key] ?? COPY.en[key] ?? key;
+    const notify = (message, tone='default') => {
+      if (typeof options.notify === 'function') options.notify(message, tone);
+      else if (tone === 'warning') console.warn(message);
+      else console.info(message);
+    };
+
+    root.classList.add('app-webrtc-pairing');
+    root.innerHTML = shellHtml();
+    const q = sel => root.querySelector(sel);
+    const qa = sel => Array.from(root.querySelectorAll(sel));
+
+    const state = {
+      role:'',
+      host:{ pc:null, channel:null, readyChannel:null, attempt:0, everConnected:false, offerCode:'', answerApplied:false, failureHandling:false },
+      join:{ pc:null, channel:null, readyChannel:null, pendingOffer:null, attempt:0, everConnected:false, answerCode:'', answerState:'idle', autoRetryCount:0, autoRetryTimer:0, failureHandling:false },
+      qr:{ hostPages:[], hostIndex:0, hostTimer:0, joinPages:[], joinIndex:0, joinTimer:0 },
+      scanner:{ mode:'', stream:null, frame:0, decoder:null, canvasCtx:null, lastDecode:0, session:'', total:0, parts:new Map() },
+      connected:false,
+      destroyed:false
+    };
+
+    function shellHtml() {
+      return `
+        <div data-webrtc-view="chooser">
+          <div class="app-webrtc-panel">
+            <div class="app-webrtc-panel-head"><div><h3 data-copy="chooseTitle"></h3><p data-copy="chooseBody"></p></div></div>
+            <div class="app-webrtc-warning" data-copy="sameLan"></div>
+            <div class="app-webrtc-role-grid" style="margin-top:12px">
+              <button class="app-webrtc-role-card" type="button" data-action="host"><strong data-copy="hostTitle"></strong><span data-copy="hostBody"></span></button>
+              <button class="app-webrtc-role-card" type="button" data-action="join"><strong data-copy="joinTitle"></strong><span data-copy="joinBody"></span></button>
+            </div>
+          </div>
+        </div>
+        <div data-webrtc-view="host" hidden>${hostHtml()}</div>
+        <div data-webrtc-view="join" hidden>${joinHtml()}</div>
+        <div class="app-webrtc-fullscreen" data-fullscreen hidden><div class="app-webrtc-fullscreen-card"><div class="app-webrtc-qr" data-fullscreen-qr></div><div class="app-webrtc-qr-meta"><strong data-fullscreen-progress>1 / 1</strong><span data-copy="qrAuto"></span></div><button class="app-webrtc-button" type="button" data-action="close-fullscreen" data-copy="close"></button></div></div>
+      `;
+    }
+    function stepsHtml() {
+      return `<div class="app-webrtc-steps"><div class="app-webrtc-step is-active" data-step="1"><strong>1</strong><span data-copy="stepOffer"></span></div><div class="app-webrtc-step" data-step="2"><strong>2</strong><span data-copy="stepAnswer"></span></div><div class="app-webrtc-step" data-step="3"><strong>3</strong><span data-copy="stepConnect"></span></div></div>`;
+    }
+    function statusHtml(side) {
+      return `<div class="app-webrtc-status" role="status" aria-live="polite"><span class="app-webrtc-status-dot" data-status-dot="${side}"></span><span data-status-text="${side}">—</span></div><div class="app-webrtc-diagnostic" data-diagnostic="${side}" hidden></div>`;
+    }
+    function qrHtml(side) {
+      return `<div class="app-webrtc-qr-wrap"><div class="app-webrtc-qr" data-qr="${side}"><div class="app-webrtc-qr-placeholder" data-copy="offerPlaceholder"></div></div><div class="app-webrtc-qr-meta"><strong data-qr-progress="${side}">—</strong><span data-copy="qrAuto"></span></div><div class="app-webrtc-button-row"><button class="app-webrtc-button small" type="button" data-action="${side}-prev" data-copy="prev"></button><button class="app-webrtc-button small" type="button" data-action="${side}-next" data-copy="next"></button><button class="app-webrtc-button small" type="button" data-action="${side}-fullscreen" data-copy="fullscreen"></button></div></div>`;
+    }
+    function scannerHtml(side) {
+      return `<div data-scanner-panel="${side}" hidden><div class="app-webrtc-scan"><video playsinline muted data-scan-video="${side}"></video><div class="app-webrtc-scan-guide"></div><canvas data-scan-canvas="${side}" hidden></canvas></div><div class="app-webrtc-scan-meta"><span data-scan-resolution="${side}">—</span><span class="app-webrtc-scan-progress" data-scan-progress="${side}" data-copy="scanStart"></span></div><div class="app-webrtc-scan-chunks" data-scan-chunks="${side}"></div><div class="app-webrtc-field" data-camera-field="${side}" hidden style="margin-top:8px"><label data-copy="camera"></label><select data-camera-select="${side}"></select></div><div class="app-webrtc-button-row" style="margin-top:8px"><button class="app-webrtc-button" type="button" data-action="${side}-stop-camera" data-copy="stopCamera"></button></div></div>`;
+    }
+    function hostHtml() {
+      return `${stepsHtml()}<section class="app-webrtc-panel"><div class="app-webrtc-panel-head"><div><h3 data-copy="hostConnectTitle"></h3><p data-copy="hostConnectBody"></p></div><button class="app-webrtc-button small" type="button" data-action="chooser" data-copy="changeRole"></button></div><div class="app-webrtc-warning" data-copy="sameLan"></div><div class="app-webrtc-coach" data-coach="host"><strong data-coach-title="host"></strong><span data-coach-body="host"></span></div>${statusHtml('host')}<div class="app-webrtc-grid"><div>${qrHtml('host')}<div class="app-webrtc-button-row" style="margin-top:9px"><button class="app-webrtc-button primary" type="button" data-action="host-create" data-copy="createOffer"></button><button class="app-webrtc-button" type="button" data-action="host-copy" data-copy="copyOffer" disabled></button></div><details class="app-webrtc-details"><summary data-copy="manualOffer"></summary><div class="app-webrtc-details-body"><div class="app-webrtc-field"><label data-copy="offerCode"></label><textarea readonly data-host-offer-code></textarea></div></div></details></div><div><div class="app-webrtc-button-row"><button class="app-webrtc-button primary" type="button" data-action="host-scan-answer" data-copy="scanAnswer" disabled></button></div><div class="app-webrtc-helper" data-copy="scanAnswerHint"></div>${scannerHtml('host')}<details class="app-webrtc-details"><summary data-copy="manualAnswer"></summary><div class="app-webrtc-details-body"><div class="app-webrtc-field"><label data-copy="answerCode"></label><textarea data-host-answer-input></textarea></div><button class="app-webrtc-button" type="button" data-action="host-apply-answer" data-copy="applyAnswer" disabled></button></div></details></div></div><div class="app-webrtc-connected" data-connected="host" hidden><strong data-copy="connected"></strong><div class="app-webrtc-helper" data-copy="connectedBody"></div><div class="app-webrtc-button-row" style="margin-top:10px"><button class="app-webrtc-button" type="button" data-action="disconnect" data-copy="disconnect"></button><button class="app-webrtc-button" type="button" data-action="host-create" data-copy="startOver"></button></div></div></section>`;
+    }
+    function joinHtml() {
+      return `${stepsHtml()}<section class="app-webrtc-panel"><div class="app-webrtc-panel-head"><div><h3 data-copy="joinConnectTitle"></h3><p data-copy="joinConnectBody"></p></div><button class="app-webrtc-button small" type="button" data-action="chooser" data-copy="changeRole"></button></div><div class="app-webrtc-coach" data-coach="join"><strong data-coach-title="join"></strong><span data-coach-body="join"></span></div>${statusHtml('join')}<div data-join-scan><div class="app-webrtc-button-row"><button class="app-webrtc-button primary" type="button" data-action="join-scan-offer" data-copy="scanOffer"></button></div>${scannerHtml('join')}<details class="app-webrtc-details"><summary data-copy="manualOfferReceive"></summary><div class="app-webrtc-details-body"><div class="app-webrtc-field"><label data-copy="offerCode"></label><textarea data-join-offer-input></textarea></div><button class="app-webrtc-button" type="button" data-action="join-use-offer" data-copy="useOffer"></button></div></details></div><div data-join-prepare hidden style="margin-top:12px"><div class="app-webrtc-warning"><strong data-copy="prepareTitle"></strong><div class="app-webrtc-helper" data-copy="prepareBody"></div></div><div class="app-webrtc-button-row" style="margin-top:9px"><button class="app-webrtc-button primary" type="button" data-action="join-create-answer" data-copy="createAnswer"></button></div></div><div data-join-answer hidden style="margin-top:12px">${qrHtml('join')}<details class="app-webrtc-details"><summary data-copy="manualAnswer"></summary><div class="app-webrtc-details-body"><div class="app-webrtc-field"><label data-copy="answerCode"></label><textarea readonly data-join-answer-code></textarea></div><button class="app-webrtc-button" type="button" data-action="join-copy-answer" data-copy="copy"></button></div></details></div><div class="app-webrtc-connected" data-connected="join" hidden><strong data-copy="connected"></strong><div class="app-webrtc-helper" data-copy="connectedBody"></div><div class="app-webrtc-button-row" style="margin-top:10px"><button class="app-webrtc-button" type="button" data-action="disconnect" data-copy="disconnect"></button><button class="app-webrtc-button" type="button" data-action="join-scan-offer" data-copy="startOver"></button></div></div></section>`;
+    }
+
+    function applyLanguage() {
+      qa('[data-copy]').forEach(el => { const key=el.dataset.copy; el.textContent=t(key); });
+      if (!state.role) return;
+      setCoach(state.role, coachStageForRole(state.role));
+      updateStatusFromConnection(state.role);
+      if (state.host.pc) void updateDiagnostics('host', state.host.pc);
+      if (state.join.pc) void updateDiagnostics('join', state.join.pc);
+    }
+
+    let hostCoachStage='offer', joinCoachStage='scan';
+    function coachStageForRole(role){ return role==='host'?hostCoachStage:joinCoachStage; }
+    function setCoach(role, stage) {
+      if (role==='host') hostCoachStage=stage; else joinCoachStage=stage;
+      const map = role==='host' ? {
+        offer:['hostCoachOfferTitle','hostCoachOfferBody','normal'], answer:['hostCoachAnswerTitle','hostCoachAnswerBody','normal'], checking:['hostCoachCheckingTitle','hostCoachCheckingBody','normal'], slow:['hostCoachSlowTitle','hostCoachSlowBody','warning'], failed:['hostCoachFailedTitle','hostCoachFailedBody','warning']
+      } : {
+        scan:['joinCoachScanTitle','joinCoachScanBody','normal'], prepare:['joinCoachPrepareTitle','joinCoachPrepareBody','normal'], answer:['joinCoachAnswerTitle','joinCoachAnswerBody','normal'], failed:['joinCoachFailedTitle','joinCoachFailedBody','warning']
+      };
+      const pair=map[stage]||map[Object.keys(map)[0]], coach=q(`[data-coach="${role}"]`);
+      if (!coach) return;
+      q(`[data-coach-title="${role}"]`).textContent=t(pair[0]); q(`[data-coach-body="${role}"]`).textContent=t(pair[1]); coach.dataset.tone=pair[2];
+    }
+    function setStep(role, step) {
+      const view=q(`[data-webrtc-view="${role}"]`); if(!view)return;
+      view.querySelectorAll('[data-step]').forEach(el=>{const n=Number(el.dataset.step);el.classList.toggle('is-done',n<step);el.classList.toggle('is-active',n===step);});
+    }
+    function setStatus(role, text, tone='default') {
+      const dot=q(`[data-status-dot="${role}"]`), label=q(`[data-status-text="${role}"]`); if(!dot||!label)return;
+      dot.dataset.tone=tone; label.textContent=text;
+    }
+    function emitState(role, phase, extra={}) { if(typeof options.onStateChange==='function') options.onStateChange({role,phase,...extra}); }
+    function showView(name) { qa('[data-webrtc-view]').forEach(el=>el.hidden=el.dataset.webrtcView!==name); }
+
+    function base64Url(bytes) { let binary=''; const chunk=0x8000; for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,i+chunk)); return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+    function fromBase64Url(value) { const base=String(value).replace(/-/g,'+').replace(/_/g,'/'); const padded=base+'='.repeat((4-base.length%4)%4); const binary=atob(padded), out=new Uint8Array(binary.length); for(let i=0;i<binary.length;i++)out[i]=binary.charCodeAt(i); return out; }
+    async function compressBytes(bytes) { if(typeof CompressionStream!=='function')return null; const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip')); return new Uint8Array(await new Response(stream).arrayBuffer()); }
+    async function decompressBytes(bytes) { if(typeof DecompressionStream!=='function')throw new Error('gzip unsupported'); const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')); return new Uint8Array(await new Response(stream).arrayBuffer()); }
+    async function encodeSignal(description) { const raw=new TextEncoder().encode(JSON.stringify({v:1,type:description.type,sdp:description.sdp})); const zipped=await compressBytes(raw); if(zipped&&zipped.length+8<raw.length)return `${options.payloadPrefix}.g.${base64Url(zipped)}`; return `${options.payloadPrefix}.j.${base64Url(raw)}`; }
+    async function decodeSignal(code) { const parts=String(code||'').trim().split('.'); if(parts.length!==3||parts[0]!==options.payloadPrefix)throw new Error('bad signal'); let bytes=fromBase64Url(parts[2]); if(parts[1]==='g')bytes=await decompressBytes(bytes); else if(parts[1]!=='j')throw new Error('bad signal encoding'); const data=JSON.parse(new TextDecoder().decode(bytes)); if(data.v!==1||!data.type||!data.sdp)throw new Error('bad signal payload'); return {type:data.type,sdp:data.sdp}; }
+    function makeTransferPages(code) { const chunks=[]; for(let i=0;i<code.length;i+=options.qrChunkSize)chunks.push(code.slice(i,i+options.qrChunkSize)); const session=randomSession(); return chunks.map((chunk,index)=>`${options.qrPrefix}.${session}.${index+1}.${chunks.length}.${chunk}`); }
+
+    function parseIceCandidates(sdp) {
+      return String(sdp||'').split(/\r?\n/).filter(line=>line.startsWith('a=candidate:')).map(line=>{ const match=line.match(/^a=candidate:\S+\s+\d+\s+(\S+)\s+\d+\s+(\S+)\s+\d+\s+typ\s+(\S+)(?:.*?\stcptype\s+(\S+))?/i); if(!match)return{protocol:'?',address:'',type:'?',tcpType:''}; return {protocol:String(match[1]||'?').toUpperCase(),address:String(match[2]||''),type:String(match[3]||'?').toLowerCase(),tcpType:String(match[4]||'').toLowerCase()}; });
+    }
+    function addressKind(address) { const value=String(address||'').toLowerCase(); if(value.endsWith('.local'))return'mDNS'; if(value.includes(':'))return'IPv6'; return value?'IPv4':'?'; }
+    function summarizeIce(sdp) { const groups=new Map(), candidates=parseIceCandidates(sdp); for(const c of candidates){const key=[c.protocol,c.type,addressKind(c.address),c.tcpType].filter(Boolean).join(' ');groups.set(key,(groups.get(key)||0)+1);} return {count:candidates.length,details:Array.from(groups.entries()).map(([key,count])=>`${key} ×${count}`).join(', ')}; }
+    function stateLabel(value) { const key={new:'stateNew',gathering:'stateGathering',complete:'stateComplete',checking:'stateChecking',connected:'stateConnected',completed:'stateCompleted',connecting:'stateConnecting',disconnected:'stateDisconnected',failed:'stateFailed',closed:'stateClosed'}[value]; return key?t(key):String(value||'—'); }
+    function candidateReportLabel(report) { if(!report)return'—'; const protocol=String(report.protocol||'?').toUpperCase(), type=String(report.candidateType||'?'), kind=addressKind(report.address||report.ip||''); const tcp=report.tcpType?` ${report.tcpType}`:''; return `${protocol} ${type} ${kind}${tcp}`; }
+    async function selectedPairLabel(pc) { if(!pc||pc.signalingState==='closed')return''; try{const stats=await pc.getStats(), map=new Map();stats.forEach(r=>map.set(r.id,r));let pair=null;stats.forEach(r=>{if(r.type==='transport'&&r.selectedCandidatePairId)pair=map.get(r.selectedCandidatePairId)||pair;});if(!pair)stats.forEach(r=>{if(!pair&&r.type==='candidate-pair'&&r.state==='succeeded'&&r.nominated)pair=r;});if(!pair)return'';return `${candidateReportLabel(map.get(pair.localCandidateId))} ↔ ${candidateReportLabel(map.get(pair.remoteCandidateId))}`;}catch{return'';} }
+    async function updateDiagnostics(role, pc, extra={}) { const el=q(`[data-diagnostic="${role}"]`); if(!el||!pc)return; const local=summarizeIce(pc.localDescription?.sdp), remote=summarizeIce(pc.remoteDescription?.sdp), pair=await selectedPairLabel(pc); const lines=[`${t('diagGather')}: ${stateLabel(pc.iceGatheringState)}`,`${t('diagLocal')}: ${local.count}${local.details?` · ${local.details}`:''}`]; if(pc.remoteDescription)lines.push(`${t('diagRemote')}: ${remote.count}${remote.details?` · ${remote.details}`:''}`);lines.push(`${t('diagIce')}: ${stateLabel(pc.iceConnectionState)}`,`${t('diagPeer')}: ${stateLabel(pc.connectionState)}`);if(pc.remoteDescription)lines.push(`${t('diagPair')}: ${pair||t('diagNoPair')}`);if(extra.note)lines.push(extra.note);else if(local.count===0&&pc.iceGatheringState==='complete')lines.push(t('diagNoLocal'));else if(pc.remoteDescription&&remote.count===0)lines.push(t('diagNoRemote'));else if(pc.iceConnectionState==='failed'||pc.connectionState==='failed')lines.push(t('diagPairFailed'));el.hidden=false;el.classList.toggle('is-warning',Boolean(extra.warning)||(local.count===0&&pc.iceGatheringState==='complete')||(pc.remoteDescription&&remote.count===0)||['failed','disconnected'].includes(pc.iceConnectionState)||['failed','disconnected'].includes(pc.connectionState));el.textContent=lines.join('\n'); }
+
+    function iceError(code) { const e=new Error(code);e.code=code;return e; }
+    function iceMessage(error) { if(error?.code==='ICE_GATHERING_ABORTED')return t('connectionClosed'); if(error?.code==='ICE_GATHERING_TIMEOUT')return t('iceTimeout'); if(error?.code==='ICE_NO_LOCAL_CANDIDATES')return t('noLocal'); if(error?.code==='ICE_NO_REMOTE_CANDIDATES')return t('noRemote'); return t('failed'); }
+    function waitForIceComplete(role, pc) { if(pc.iceGatheringState==='complete')return Promise.resolve(); return new Promise((resolve,reject)=>{let done=false;const cleanup=()=>{clearTimeout(timer);['icegatheringstatechange','icecandidate','signalingstatechange','iceconnectionstatechange','connectionstatechange'].forEach(type=>pc.removeEventListener(type,check));};const finish=()=>{if(done)return;done=true;cleanup();resolve();};const fail=code=>{if(done)return;done=true;cleanup();reject(iceError(code));};const check=()=>{void updateDiagnostics(role,pc);if(pc.iceGatheringState==='complete')finish();else if(pc.signalingState==='closed')fail('ICE_GATHERING_ABORTED');else if(pc.iceConnectionState==='failed'||pc.connectionState==='failed')fail('ICE_PRECONNECT_FAILED');};const timer=setTimeout(()=>fail('ICE_GATHERING_TIMEOUT'),options.iceGatherTimeoutMs);['icegatheringstatechange','icecandidate','signalingstatechange','iceconnectionstatechange','connectionstatechange'].forEach(type=>pc.addEventListener(type,check));check();}); }
+
+    function isCurrentPc(role, pc, attempt) { const bucket=state[role]; return !state.destroyed && bucket.pc===pc && bucket.attempt===attempt; }
+    function createPeer(role, attempt) {
+      const pc=new RTCPeerConnection({iceServers:[]});
+      state[role].pc=pc;
+      const guard=()=>isCurrentPc(role,pc,attempt);
+      pc.addEventListener('icegatheringstatechange',()=>{if(guard())void updateDiagnostics(role,pc);});
+      pc.addEventListener('iceconnectionstatechange',()=>{if(!guard())return;void updateDiagnostics(role,pc);if(pc.iceConnectionState==='failed')void handleConnectionState(role,'failed',pc,attempt);});
+      pc.addEventListener('connectionstatechange',()=>{if(!guard())return;void updateDiagnostics(role,pc);void handleConnectionState(role,pc.connectionState,pc,attempt);});
+      const api={ role, pc, createDataChannel(label,init){const ch=pc.createDataChannel(label,init);bindChannel(role,ch,pc,attempt);return ch;}, bindChannel(ch){bindChannel(role,ch,pc,attempt);} };
+      if(typeof options.onPeerCreated==='function')options.onPeerCreated(api);
+      return pc;
+    }
+    function bindChannel(role, channel, pc, attempt) {
+      const bucket=state[role];
+      const current=()=>isCurrentPc(role,pc,attempt);
+      if(!current()){try{channel.close();}catch{}return;}
+      const isDefaultChannel=channel.label===options.dataChannelLabel;
+      const isReadyChannel=Boolean(readyChannelLabel)&&channel.label===readyChannelLabel;
+      if(isDefaultChannel&&!bucket.channel)bucket.channel=channel;
+      if(isReadyChannel&&!bucket.readyChannel)bucket.readyChannel=channel;
+      channel.addEventListener('open',()=>{
+        if(!current()){try{channel.close();}catch{}return;}
+        if(isDefaultChannel&&!bucket.channel)bucket.channel=channel;
+        if(isReadyChannel&&!bucket.readyChannel)bucket.readyChannel=channel;
+        if(typeof options.onChannel==='function')options.onChannel({role,pc,channel});
+        if(pc.connectionState==='connected')markConnected(role,pc,attempt);
+      });
+      channel.addEventListener('message',event=>{if(current()&&typeof options.onMessage==='function')options.onMessage({role,pc,channel,data:event.data,event});});
+      channel.addEventListener('close',()=>{
+        if(!current())return;
+        if(bucket.channel===channel)bucket.channel=null;
+        if(bucket.readyChannel===channel)bucket.readyChannel=null;
+      });
+    }
+    function markConnected(role, pc, attempt) {
+      if(!isCurrentPc(role,pc,attempt))return;
+      const bucket=state[role],readyChannel=bucket.readyChannel;
+      if(options.requireReadyChannelOpen!==false&&(!readyChannel||readyChannel.readyState!=='open'))return;
+      if(bucket.everConnected)return;
+      const connectedChannel=readyChannel||bucket.channel||null;
+      bucket.everConnected=true;state.connected=true;setStep(role,3);setStatus(role,t('connected'),'active');q(`[data-connected="${role}"]`).hidden=false;setCoach(role,role==='host'?'checking':'answer');q('[data-fullscreen]').hidden=true;emitState(role,'connected',{pc,channel:connectedChannel,readyChannel});if(typeof options.onConnected==='function')options.onConnected({role,pc,channel:connectedChannel,readyChannel});stopScanner();stopQrCycles();
+    }
+
+    async function handleConnectionState(role, connectionState, pc, attempt) {
+      if(!isCurrentPc(role,pc,attempt))return; const bucket=state[role];
+      if(connectionState==='connected'){markConnected(role,pc,attempt);return;}
+      if(connectionState==='disconnected'){setStatus(role,t('disconnected'),'warning');emitState(role,'disconnected',{pc});if(typeof options.onDisconnected==='function')options.onDisconnected({role,pc,temporary:true});return;}
+      if(connectionState==='failed'){
+        if(role==='join'&&!bucket.everConnected&&bucket.pendingOffer){void scheduleJoinRegeneration();return;}
+        setStatus(role,t('failed'),'warning');setCoach(role,'failed');void updateDiagnostics(role,pc,{warning:true});emitState(role,'failed',{pc});if(typeof options.onDisconnected==='function')options.onDisconnected({role,pc,temporary:false});return;
+      }
+      if(connectionState==='closed'){setStatus(role,t('closed'));emitState(role,'closed',{pc});}
+      else if(connectionState==='connecting')setStatus(role,t('checking'),'warning');
+    }
+
+    function closePc(role) { const bucket=state[role], pc=bucket.pc; bucket.pc=null;bucket.channel=null;bucket.readyChannel=null;bucket.everConnected=false;bucket.failureHandling=false;if(pc){try{pc.getSenders?.().forEach(()=>{});}catch{}try{pc.close();}catch{}} }
+    function resetHost({keepView=false}={}) { state.host.attempt+=1; closePc('host');state.host.offerCode='';state.host.answerApplied=false;state.connected=false;stopQr('host');stopScanner();q('[data-host-offer-code]').value='';q('[data-host-answer-input]').value='';q('[data-action="host-copy"]').disabled=true;q('[data-action="host-scan-answer"]').disabled=true;q('[data-action="host-apply-answer"]').disabled=true;q('[data-connected="host"]').hidden=true;q('[data-diagnostic="host"]').hidden=true;setStep('host',1);setCoach('host','offer');setStatus('host',t('stateNew'));renderQrPlaceholder('host',t('offerPlaceholder'));if(!keepView)showView('chooser'); }
+    function resetJoin({preserveOffer=false,preserveRetry=false,keepView=false}={}) { state.join.attempt+=1; closePc('join');state.connected=false;stopQr('join');stopScanner();state.join.answerCode='';state.join.answerState=preserveOffer&&state.join.pendingOffer?'prepare':'idle';if(!preserveOffer)state.join.pendingOffer=null;if(!preserveRetry)state.join.autoRetryCount=0;if(state.join.autoRetryTimer)clearTimeout(state.join.autoRetryTimer);state.join.autoRetryTimer=0;q('[data-join-answer-code]').value='';q('[data-join-answer]').hidden=true;q('[data-connected="join"]').hidden=true;q('[data-diagnostic="join"]').hidden=true;q('[data-join-prepare]').hidden=!state.join.pendingOffer;setStep('join',state.join.pendingOffer?2:1);setCoach('join',state.join.pendingOffer?'prepare':'scan');setStatus('join',t('stateNew'));if(!keepView)showView('chooser'); }
+    function resetAll() { resetHost({keepView:true});resetJoin({keepView:true});state.role='';showView('chooser'); }
+
+    async function startHost() { resetJoin({keepView:true});state.role='host';showView('host');applyLanguage();await createHostOffer(); }
+    async function createHostOffer() {
+      resetHost({keepView:true});state.role='host';showView('host');setCoach('host','offer');const attempt=++state.host.attempt;setStatus('host',t('creatingOffer'),'warning');q('[data-action="host-create"]').disabled=true;emitState('host','creating-offer');
+      let pc=null;
+      try {
+        pc=createPeer('host',attempt);state.host.pc=pc;
+        if(options.createDefaultChannel!==false){const ch=pc.createDataChannel(options.dataChannelLabel,options.dataChannelInit);state.host.channel=ch;bindChannel('host',ch,pc,attempt);}
+        await pc.setLocalDescription(await pc.createOffer());setStatus('host',t('waitingIce'),'warning');await updateDiagnostics('host',pc);await waitForIceComplete('host',pc);if(!isCurrentPc('host',pc,attempt))return;if(summarizeIce(pc.localDescription?.sdp).count===0)throw iceError('ICE_NO_LOCAL_CANDIDATES');state.host.offerCode=await encodeSignal(pc.localDescription);q('[data-host-offer-code]').value=state.host.offerCode;q('[data-action="host-copy"]').disabled=false;q('[data-action="host-scan-answer"]').disabled=false;setStatus('host',t('offerReady'),'active');setStep('host',2);setCoach('host','offer');state.qr.hostPages=makeTransferPages(state.host.offerCode);state.qr.hostIndex=0;await showQr('host');startQrCycle('host');emitState('host','offer-ready',{pc});
+      } catch(error) {
+        if(pc&&!isCurrentPc('host',pc,attempt))return;const message=iceMessage(error);if(pc)await updateDiagnostics('host',pc,{warning:true,note:message});setStatus('host',message,'warning');setCoach('host','failed');emitState('host','offer-failed',{error});notify(message,'warning');closePc('host');
+      } finally { q('[data-action="host-create"]').disabled=false; }
+    }
+
+    async function acceptJoinOffer(code) { resetJoin({keepView:true});state.role='join';showView('join');try{const remote=await decodeSignal(code);if(remote.type!=='offer')throw new Error('not offer');if(summarizeIce(remote.sdp).count===0)throw iceError('ICE_NO_REMOTE_CANDIDATES');state.join.pendingOffer=remote;state.join.answerState='prepare';state.join.autoRetryCount=0;q('[data-join-prepare]').hidden=false;q('[data-join-answer]').hidden=true;setStep('join',2);setCoach('join','prepare');setStatus('join',t('prepareTitle'),'warning');const remoteSummary=summarizeIce(remote.sdp),el=q('[data-diagnostic="join"]');el.hidden=false;el.classList.remove('is-warning');el.textContent=`${t('diagRemote')}: ${remoteSummary.count}${remoteSummary.details?` · ${remoteSummary.details}`:''}`;emitState('join','offer-accepted',{remote});}catch(error){const message=String(error?.code||'').startsWith('ICE_')?iceMessage(error):t('invalidSignal');setStatus('join',message,'warning');setCoach('join','failed');notify(message,'warning');}}
+
+    async function createJoinAnswer({auto=false}={}) {
+      if(!state.join.pendingOffer)return;if(!auto)state.join.autoRetryCount=0;const remote=state.join.pendingOffer;const attempt=++state.join.attempt;closePc('join');state.join.failureHandling=false;state.join.answerCode='';state.join.answerState='preparing';q('[data-join-prepare]').hidden=true;q('[data-join-answer]').hidden=false;renderQrPlaceholder('join',auto?t('regeneratingAnswer'):t('creatingAnswer'));setStatus('join',auto?t('regeneratingAnswer'):t('creatingAnswer'),'warning');setCoach('join','answer');q('[data-action="join-create-answer"]').disabled=true;emitState('join','creating-answer',{auto});
+      let pc=null;
+      try {
+        pc=createPeer('join',attempt);state.join.pc=pc;pc.addEventListener('datachannel',event=>bindChannel('join',event.channel,pc,attempt));await pc.setRemoteDescription(remote);await updateDiagnostics('join',pc);if(summarizeIce(pc.remoteDescription?.sdp).count===0)throw iceError('ICE_NO_REMOTE_CANDIDATES');await pc.setLocalDescription(await pc.createAnswer());setStatus('join',t('waitingIce'),'warning');await updateDiagnostics('join',pc);await waitForIceComplete('join',pc);if(!isCurrentPc('join',pc,attempt))return;if(summarizeIce(pc.localDescription?.sdp).count===0)throw iceError('ICE_NO_LOCAL_CANDIDATES');if(['failed','closed'].includes(pc.iceConnectionState)||['failed','closed'].includes(pc.connectionState))throw iceError('ICE_PRECONNECT_FAILED');state.join.answerCode=await encodeSignal(pc.localDescription);q('[data-join-answer-code]').value=state.join.answerCode;state.join.answerState='ready';state.qr.joinPages=makeTransferPages(state.join.answerCode);state.qr.joinIndex=0;await showQr('join');startQrCycle('join');setStatus('join',t('answerReady'),'active');setStep('join',2);setCoach('join','answer');emitState('join','answer-ready',{pc});
+      } catch(error) {
+        if(pc&&!isCurrentPc('join',pc,attempt))return;if(String(error?.code||'').startsWith('ICE_')&&state.join.pendingOffer&&!state.join.everConnected){await scheduleJoinRegeneration();return;}const message=String(error?.code||'').startsWith('ICE_')?iceMessage(error):t('invalidSignal');if(pc)await updateDiagnostics('join',pc,{warning:true,note:message});setStatus('join',message,'warning');setCoach('join','failed');notify(message,'warning');
+      } finally { if(state.join.attempt===attempt)q('[data-action="join-create-answer"]').disabled=false; }
+    }
+    async function scheduleJoinRegeneration() { if(!state.join.pendingOffer||state.join.everConnected||state.join.failureHandling)return;state.join.failureHandling=true;if(state.join.autoRetryCount>=options.answerAutoRetryLimit){resetJoin({preserveOffer:true,preserveRetry:true,keepView:true});q('[data-join-prepare]').hidden=false;setStatus('join',t('retryExhausted'),'warning');notify(t('retryExhausted'),'warning');return;}state.join.autoRetryCount+=1;state.join.attempt+=1;closePc('join');state.join.failureHandling=true;stopQr('join');q('[data-join-answer]').hidden=false;renderQrPlaceholder('join',t('regeneratingAnswer'));setStatus('join',t('answerAutoRetry'),'warning');notify(t('answerAutoRetry'),'warning');if(state.join.autoRetryTimer)clearTimeout(state.join.autoRetryTimer);state.join.autoRetryTimer=setTimeout(()=>{state.join.autoRetryTimer=0;void createJoinAnswer({auto:true});},options.answerAutoRetryDelayMs); }
+
+    async function applyHostAnswer(code) { const pc=state.host.pc;if(!pc)return;const attempt=state.host.attempt;let applied=false;try{const remote=await decodeSignal(code);if(remote.type!=='answer')throw new Error('not answer');await pc.setRemoteDescription(remote);applied=true;if(!isCurrentPc('host',pc,attempt))return;if(summarizeIce(pc.remoteDescription?.sdp).count===0)throw iceError('ICE_NO_REMOTE_CANDIDATES');state.host.answerApplied=true;setCoach('host','checking');setStatus('host',t('checking'),'warning');setStep('host',3);await updateDiagnostics('host',pc);emitState('host','answer-applied',{pc});setTimeout(()=>{if(isCurrentPc('host',pc,attempt)&&!state.host.everConnected){setCoach('host','slow');setStatus('host',t('hostCoachSlowTitle'),'warning');void updateDiagnostics('host',pc,{warning:true});}},7000);}catch(error){const message=String(error?.code||'').startsWith('ICE_')?iceMessage(error):t('invalidSignal');if(applied&&isCurrentPc('host',pc,attempt)){await updateDiagnostics('host',pc,{warning:true,note:message});setStatus('host',message,'warning');setCoach('host','failed');closePc('host');}notify(message,'warning');}}
+
+    async function ensureQrLibrary() { if(typeof window.qrcode==='function')return window.qrcode;if(!window.StandaloneAssets?.loadClassicScript)throw new Error('StandaloneAssets unavailable');await window.StandaloneAssets.loadClassicScript(options.qrDependencyId,options.qrAssetKey,'qrcode');if(typeof window.qrcode!=='function')throw new Error('qrcode global unavailable');return window.qrcode; }
+    async function renderQr(target,text) { const factory=await ensureQrLibrary(),qr=factory(0,'L');qr.addData(text,'Byte');qr.make();target.innerHTML=qr.createSvgTag({cellSize:3,margin:12,scalable:true,alt:language==='ja'?'接続用QRコード':'Connection QR code'}); }
+    function renderQrPlaceholder(role,text) { q(`[data-qr="${role}"]`).innerHTML=`<div class="app-webrtc-qr-placeholder">${escapeHtml(text)}</div>`;q(`[data-qr-progress="${role}"]`).textContent='—'; }
+    async function showQr(role,index=null) { const pages=role==='host'?state.qr.hostPages:state.qr.joinPages;if(!pages.length)return;const key=role==='host'?'hostIndex':'joinIndex';if(index!==null)state.qr[key]=(index+pages.length)%pages.length;const i=state.qr[key];await renderQr(q(`[data-qr="${role}"]`),pages[i]);q(`[data-qr-progress="${role}"]`).textContent=`${i+1} / ${pages.length}`;if(!q('[data-fullscreen]').hidden&&q('[data-fullscreen]').dataset.role===role){await renderQr(q('[data-fullscreen-qr]'),pages[i]);q('[data-fullscreen-progress]').textContent=`${i+1} / ${pages.length}`;}}
+    function stopQr(role){const timerKey=role==='host'?'hostTimer':'joinTimer';if(state.qr[timerKey])clearInterval(state.qr[timerKey]);state.qr[timerKey]=0;}
+    function stopQrCycles(){stopQr('host');stopQr('join');}
+    function startQrCycle(role){stopQr(role);const pages=role==='host'?state.qr.hostPages:state.qr.joinPages;if(pages.length<2)return;const timerKey=role==='host'?'hostTimer':'joinTimer',delay=role==='host'?options.offerQrCycleMs:options.answerQrCycleMs;state.qr[timerKey]=setInterval(()=>{const key=role==='host'?'hostIndex':'joinIndex';void showQr(role,state.qr[key]+1);},delay);}
+    function stepQr(role,delta){stopQr(role);const key=role==='host'?'hostIndex':'joinIndex';void showQr(role,state.qr[key]+delta).finally(()=>startQrCycle(role));}
+    async function openFullscreen(role){const pages=role==='host'?state.qr.hostPages:state.qr.joinPages;if(!pages.length)return;q('[data-fullscreen]').hidden=false;q('[data-fullscreen]').dataset.role=role;await showQr(role);}
+
+    function scannerElements(role){return {panel:q(`[data-scanner-panel="${role}"]`),video:q(`[data-scan-video="${role}"]`),canvas:q(`[data-scan-canvas="${role}"]`),resolution:q(`[data-scan-resolution="${role}"]`),progress:q(`[data-scan-progress="${role}"]`),cameraField:q(`[data-camera-field="${role}"]`),cameraSelect:q(`[data-camera-select="${role}"]`),chunks:q(`[data-scan-chunks="${role}"]`)};}
+    async function ensureScannerDecoder(role) { if(state.scanner.decoder)return state.scanner.decoder;if('BarcodeDetector'in window){try{const formats=typeof BarcodeDetector.getSupportedFormats==='function'?await BarcodeDetector.getSupportedFormats():['qr_code'];if(formats.includes('qr_code')){const detector=new BarcodeDetector({formats:['qr_code']});state.scanner.decoder=async video=>(await detector.detect(video))[0]?.rawValue||'';return state.scanner.decoder;}}catch{}}if(typeof window.jsQR!=='function'){if(!window.StandaloneAssets?.loadClassicScript)throw new Error('StandaloneAssets unavailable');await window.StandaloneAssets.loadClassicScript(options.decoderDependencyId,options.decoderAssetKey,'jsQR');}if(typeof window.jsQR!=='function')throw new Error('jsQR unavailable');const canvas=scannerElements(role).canvas;state.scanner.canvasCtx=canvas.getContext('2d',{willReadFrequently:true});state.scanner.decoder=async video=>{if(!video.videoWidth||!video.videoHeight)return'';const scale=Math.min(1,1280/video.videoWidth),w=Math.max(320,Math.round(video.videoWidth*scale)),h=Math.max(240,Math.round(video.videoHeight*scale));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}state.scanner.canvasCtx.drawImage(video,0,0,w,h);const image=state.scanner.canvasCtx.getImageData(0,0,w,h);return window.jsQR(image.data,w,h,{inversionAttempts:'attemptBoth'})?.data||'';};return state.scanner.decoder; }
+    async function openCamera(role,deviceId='') { if(state.scanner.stream)state.scanner.stream.getTracks().forEach(track=>track.stop());const els=scannerElements(role),videoConstraints={width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:15,max:30}};if(deviceId)videoConstraints.deviceId={exact:deviceId};else if(role==='join')videoConstraints.facingMode={ideal:'environment'};state.scanner.stream=await navigator.mediaDevices.getUserMedia({video:videoConstraints,audio:false});els.video.srcObject=state.scanner.stream;await els.video.play();const track=state.scanner.stream.getVideoTracks()[0],settings=track.getSettings?.()||{};els.resolution.textContent=format(t('resolution'),{width:settings.width||els.video.videoWidth||'—',height:settings.height||els.video.videoHeight||'—'});try{const caps=track.getCapabilities?.()||{},advanced={};if(caps.focusMode?.includes?.('continuous'))advanced.focusMode='continuous';await track.applyConstraints({width:{ideal:Math.min(1920,caps.width?.max||1920)},height:{ideal:Math.min(1080,caps.height?.max||1080)},advanced:Object.keys(advanced).length?[advanced]:[]});}catch{}const devices=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');els.cameraSelect.innerHTML='';devices.forEach((d,i)=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||`Camera ${i+1}`;if(d.deviceId===track.getSettings?.().deviceId)o.selected=true;els.cameraSelect.append(o);});els.cameraField.hidden=devices.length<2; }
+    function renderChunks(role,total,parts){const bar=scannerElements(role).chunks;if(!total){bar.innerHTML='';return;}bar.innerHTML=Array.from({length:total},(_,i)=>`<span class="app-webrtc-scan-chunk${parts.has(i+1)?' is-done':''}"></span>`).join('');}
+    function parseTransferQr(role,raw){if(raw.startsWith(`${options.payloadPrefix}.`))return{complete:raw};const prefix=options.qrPrefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),match=new RegExp(`^${prefix}\\.([a-z0-9]+)\\.(\\d+)\\.(\\d+)\\.(.+)$`,'i').exec(raw);if(!match)return null;const [,session,indexText,totalText,chunk]=match,index=Number(indexText),total=Number(totalText);if(index<1||total<1||index>total||total>20)return null;if(state.scanner.session!==session){state.scanner.session=session;state.scanner.total=total;state.scanner.parts=new Map();scannerElements(role).progress.textContent=format(t('pagesReady'),{total});renderChunks(role,total,state.scanner.parts);}if(state.scanner.total!==total)return null;state.scanner.parts.set(index,chunk);renderChunks(role,total,state.scanner.parts);scannerElements(role).progress.textContent=format(t('chunks'),{read:state.scanner.parts.size,total});if(state.scanner.parts.size===total){let full='';for(let i=1;i<=total;i++){if(!state.scanner.parts.has(i))return null;full+=state.scanner.parts.get(i);}return{complete:full};}return{partial:true};}
+    async function startScanner(role) { if(!navigator.mediaDevices?.getUserMedia){notify(t('cameraUnsupported'),'warning');return;}stopScanner();state.scanner.mode=role;const els=scannerElements(role);try{state.scanner.session='';state.scanner.total=0;state.scanner.parts=new Map();state.scanner.lastDecode=0;els.progress.textContent=t('scanStart');renderChunks(role,0,new Map());els.panel.hidden=false;await ensureScannerDecoder(role);await openCamera(role);if(role==='host')els.progress.textContent=t('scanReady');const tick=async now=>{if(!state.scanner.stream)return;if(now-state.scanner.lastDecode>180){state.scanner.lastDecode=now;try{const raw=await state.scanner.decoder(els.video);if(raw){const parsed=parseTransferQr(role,String(raw).trim());if(parsed?.complete){if(role==='join'){q('[data-join-offer-input]').value=parsed.complete;notify(t('scanOfferFound'));stopScanner();await acceptJoinOffer(parsed.complete);return;}q('[data-host-answer-input]').value=parsed.complete;q('[data-action="host-apply-answer"]').disabled=false;notify(t('scanAnswerFound'));stopScanner();await applyHostAnswer(parsed.complete);return;}}}catch{}}state.scanner.frame=requestAnimationFrame(tick);};state.scanner.frame=requestAnimationFrame(tick);}catch(error){console.warn(error);notify(t('cameraFailed'),'warning');stopScanner();}}
+    function stopScanner(){if(state.scanner.frame)cancelAnimationFrame(state.scanner.frame);state.scanner.frame=0;state.scanner.decoder=null;state.scanner.canvasCtx=null;state.scanner.lastDecode=0;if(state.scanner.stream){state.scanner.stream.getTracks().forEach(track=>track.stop());state.scanner.stream=null;}qa('[data-scanner-panel]').forEach(el=>el.hidden=true);qa('[data-scan-video]').forEach(video=>video.srcObject=null);state.scanner.mode='';}
+
+    async function copyText(text){try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);else{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.append(ta);ta.select();document.execCommand('copy');ta.remove();}notify(t('copied'));}catch{notify(t('copyFailed'),'warning');}}
+    function updateStatusFromConnection(role){const pc=state[role].pc;if(!pc){setStatus(role,state[role].pendingOffer?t('prepareTitle'):t('stateNew'));return;}if(pc.connectionState==='connected')setStatus(role,t('connected'),'active');else if(pc.connectionState==='failed')setStatus(role,t('failed'),'warning');else if(pc.connectionState==='disconnected')setStatus(role,t('disconnected'),'warning');}
+
+    root.addEventListener('click', event=>{
+      const button=event.target.closest('[data-action]');if(!button||!root.contains(button))return;const action=button.dataset.action;
+      if(action==='host')void startHost();else if(action==='join'){resetHost({keepView:true});state.role='join';showView('join');applyLanguage();setCoach('join','scan');if(options.autoStartJoinScanner)void startScanner('join');}
+      else if(action==='chooser')resetAll();else if(action==='host-create')void createHostOffer();else if(action==='host-copy')void copyText(state.host.offerCode);else if(action==='host-scan-answer'){setCoach('host','answer');void startScanner('host');}
+      else if(action==='host-apply-answer')void applyHostAnswer(q('[data-host-answer-input]').value.trim());else if(action==='join-scan-offer')void startScanner('join');else if(action==='join-use-offer')void acceptJoinOffer(q('[data-join-offer-input]').value.trim());else if(action==='join-create-answer')void createJoinAnswer();else if(action==='join-copy-answer')void copyText(state.join.answerCode);
+      else if(action==='host-prev')stepQr('host',-1);else if(action==='host-next')stepQr('host',1);else if(action==='join-prev')stepQr('join',-1);else if(action==='join-next')stepQr('join',1);else if(action==='host-fullscreen')void openFullscreen('host');else if(action==='join-fullscreen')void openFullscreen('join');else if(action==='close-fullscreen')q('[data-fullscreen]').hidden=true;
+      else if(action==='host-stop-camera'||action==='join-stop-camera')stopScanner();else if(action==='disconnect'){closePc(state.role);state.connected=false;q(`[data-connected="${state.role}"]`).hidden=true;setStatus(state.role,t('closed'));emitState(state.role,'closed');}
+    });
+    root.addEventListener('input',event=>{if(event.target.matches('[data-host-answer-input]'))q('[data-action="host-apply-answer"]').disabled=!event.target.value.trim();});
+    root.addEventListener('change',event=>{if(event.target.matches('[data-camera-select]')){const role=event.target.dataset.cameraSelect;state.scanner.mode=role;void openCamera(role,event.target.value).catch(()=>notify(t('cameraFailed'),'warning'));}});
+    const onKeydown=event=>{if(event.key==='Escape'&&!q('[data-fullscreen]').hidden)q('[data-fullscreen]').hidden=true;};
+    document.addEventListener('keydown',onKeydown);
+
+    applyLanguage();showView('chooser');
+
+    const api = {
+      setLanguage(value){language=value==='en'?'en':'ja';applyLanguage();},
+      language(){return language;},
+      startHost(){return startHost();},
+      startJoin(){resetHost({keepView:true});resetJoin({keepView:true});state.role='join';showView('join');applyLanguage();setCoach('join','scan');return options.autoStartJoinScanner?startScanner('join'):Promise.resolve();},
+      showRoleChooser(){resetAll();},
+      send(data){const bucket=state[state.role],ch=bucket?.readyChannel||bucket?.channel;if(!ch||ch.readyState!=='open')throw new Error('DataChannel is not open');ch.send(data);},
+      channel(){const bucket=state[state.role];return bucket?.readyChannel||bucket?.channel||null;},
+      peerConnection(){return state[state.role]?.pc||null;},
+      role(){return state.role;},
+      close(){resetAll();},
+      destroy(){state.destroyed=true;document.removeEventListener('keydown',onKeydown);resetAll();root.replaceChildren();root.classList.remove('app-webrtc-pairing');}
+    };
+    return api;
+  }
+
+  window.AppWebRtcQrPairing = Object.freeze({ mount });
+})();
+</script>

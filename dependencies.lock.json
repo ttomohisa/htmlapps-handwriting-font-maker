@@ -1,0 +1,5 @@
+{
+  "$schema": "./schemas/dependencies-lock.schema.json",
+  "schemaVersion": 1,
+  "dependencies": []
+}

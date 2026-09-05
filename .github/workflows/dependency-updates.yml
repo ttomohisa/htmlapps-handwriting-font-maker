@@ -1,0 +1,72 @@
+name: Check dependency updates
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 0 * * 1"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check npm dependency updates
+        id: dependency-check
+        shell: pwsh
+        run: |
+          ./scripts/check-dependency-updates.ps1
+          $report = Get-Content -Raw -Encoding UTF8 ./dist/dependency-update-report.json | ConvertFrom-Json
+          "update_count=$($report.updateCount)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Create, refresh, or close dependency issue
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_COUNT: ${{ steps.dependency-check.outputs.update_count }}
+        run: |
+          $title = "chore(deps): dependency updates available"
+          $bodyPath = Join-Path $PWD "dist/dependency-update-report.md"
+
+          $labelDefinitions = @(
+            @{ name = "dependencies"; color = "0366D6"; description = "Dependency maintenance" },
+            @{ name = "maintenance"; color = "D4C5F9"; description = "Repository maintenance" },
+            @{ name = "automated"; color = "BFDADC"; description = "Created or maintained by automation" }
+          )
+          $existingLabels = @(gh label list --limit 100 --json name | ConvertFrom-Json | ForEach-Object { [string]$_.name })
+          foreach ($label in $labelDefinitions) {
+            if ($existingLabels -notcontains [string]$label.name) {
+              gh label create $label.name --color $label.color --description $label.description
+            }
+          }
+
+          $issues = @(gh issue list --state open --label dependencies --label automated --limit 100 --json number,title | ConvertFrom-Json)
+          $existing = @($issues | Where-Object { [string]$_.title -eq $title } | Select-Object -First 1)
+          $updateCount = [int]$env:UPDATE_COUNT
+
+          if ($updateCount -gt 0) {
+            if ($existing.Count -gt 0) {
+              gh issue edit $existing[0].number --body-file $bodyPath --add-label dependencies --add-label maintenance --add-label automated
+              Write-Host "Refreshed dependency update issue #$($existing[0].number)."
+            } else {
+              gh issue create --title $title --body-file $bodyPath --label dependencies --label maintenance --label automated
+            }
+            exit 0
+          }
+
+          if ($existing.Count -gt 0) {
+            gh issue close $existing[0].number --comment "The scheduled dependency check found no remaining updates under the configured policies, so this maintenance issue is being closed automatically."
+          } else {
+            Write-Host "No dependency updates and no open maintenance issue."
+          }
+
+      - name: Add workflow summary
+        if: always() && steps.dependency-check.outcome == 'success'
+        shell: pwsh
+        run: Get-Content -Raw -Encoding UTF8 ./dist/dependency-update-report.md | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

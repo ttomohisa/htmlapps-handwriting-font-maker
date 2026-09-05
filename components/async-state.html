@@ -1,0 +1,38 @@
+<!-- Reusable source-generation + async phase guard. Copy the script into apps with file/media processing. -->
+<script>
+  (() => {
+    const DEFAULT_PHASES = Object.freeze(['empty', 'ready', 'loading-runtime', 'processing', 'result', 'error']);
+
+    function create({ initialPhase = 'empty', phases = DEFAULT_PHASES, onChange = null } = {}) {
+      const allowed = new Set(phases);
+      let generation = 0;
+      let state = Object.freeze({ phase: initialPhase, generation, message: '', progress: null, error: null });
+      if (!allowed.has(initialPhase)) throw new Error(`Unknown initial phase: ${initialPhase}`);
+
+      function publish(next) {
+        state = Object.freeze(next);
+        if (typeof onChange === 'function') onChange(state);
+        return state;
+      }
+      function setPhase(phase, patch = {}) {
+        if (!allowed.has(phase)) throw new Error(`Unknown phase: ${phase}`);
+        return publish({ ...state, ...patch, phase, generation });
+      }
+      function invalidateSource(patch = {}) {
+        generation += 1;
+        return publish({ message: '', progress: null, error: null, ...patch, phase: 'empty', generation });
+      }
+      function captureGeneration() { return generation; }
+      function isCurrent(token) { return token === generation; }
+      return Object.freeze({
+        get state() { return state; },
+        setPhase,
+        invalidateSource,
+        captureGeneration,
+        isCurrent
+      });
+    }
+
+    window.AppAsyncState = Object.freeze({ create, phases: DEFAULT_PHASES });
+  })();
+</script>

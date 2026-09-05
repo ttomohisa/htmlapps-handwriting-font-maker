@@ -1,0 +1,203 @@
+<!--
+  Reusable confirmation dialog for htmlapps-template.
+  Copy this block into src/index.template.html and adapt tokens/labels as needed.
+  API: await AppConfirm.ask({ title, message, confirmLabel, cancelLabel, tone })
+-->
+<style>
+  .app-confirm-dialog {
+    width: min(420px, calc(100% - 24px));
+    max-width: 100%;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line, #dadbd6);
+    border-radius: 17px;
+    background: var(--surface, #fff);
+    color: var(--text, #20211f);
+    box-shadow: var(--shadow-md, 0 12px 34px rgba(25, 28, 24, .10));
+  }
+  .app-confirm-dialog::backdrop {
+    background: rgba(15, 17, 14, .48);
+    backdrop-filter: blur(3px);
+  }
+  .app-confirm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 18px 13px;
+    border-bottom: 1px solid var(--line, #dadbd6);
+  }
+  .app-confirm-title { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+  .app-confirm-close {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text, #20211f);
+    cursor: pointer;
+  }
+  .app-confirm-close:hover { background: var(--surface-hover, #e9e9e5); }
+  .app-confirm-close svg { width: 19px; height: 19px; }
+  .app-confirm-body { padding: 18px; }
+  .app-confirm-message {
+    margin: 0;
+    color: var(--muted, #666963);
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  .app-confirm-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .app-confirm-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--line, #dadbd6);
+    border-radius: 11px;
+    background: var(--surface, #fff);
+    color: var(--text, #20211f);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 760;
+    cursor: pointer;
+  }
+  .app-confirm-button:hover {
+    border-color: var(--line-strong, #bfc1ba);
+    background: var(--surface-hover, #e9e9e5);
+  }
+  .app-confirm-button.primary {
+    border-color: var(--accent, #16624f);
+    background: var(--accent, #16624f);
+    color: #fff;
+  }
+  .app-confirm-button.primary:hover {
+    border-color: var(--accent-hover, #0e503f);
+    background: var(--accent-hover, #0e503f);
+  }
+  .app-confirm-button.danger {
+    border-color: var(--danger, #b3261e);
+    background: var(--danger, #b3261e);
+    color: #fff;
+  }
+  .app-confirm-button:focus-visible,
+  .app-confirm-close:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--focus, #4d8bc7) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 520px) {
+    .app-confirm-dialog {
+      width: 100%;
+      max-width: none;
+      margin: auto 0 0;
+      border-width: 1px 0 0;
+      border-radius: 22px 22px 0 0;
+    }
+    .app-confirm-dialog::backdrop {
+      background: rgba(0, 0, 0, .42);
+      backdrop-filter: blur(2px);
+    }
+    .app-confirm-header { padding: 14px 18px 12px; }
+    .app-confirm-body { padding: 12px 18px calc(env(safe-area-inset-bottom) + 18px); }
+    .app-confirm-message { font-size: 14px; line-height: 1.75; }
+    .app-confirm-actions { grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+    .app-confirm-button { min-height: 48px; font-size: 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-confirm-dialog, .app-confirm-button, .app-confirm-close { transition: none !important; }
+  }
+</style>
+
+<dialog class="app-confirm-dialog" id="appConfirmDialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
+  <div class="app-confirm-header">
+    <h2 class="app-confirm-title" id="appConfirmTitle">Confirm</h2>
+    <button class="app-confirm-close" id="appConfirmClose" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6 6 18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="app-confirm-body">
+    <p class="app-confirm-message" id="appConfirmMessage"></p>
+    <div class="app-confirm-actions">
+      <button class="app-confirm-button" id="appConfirmCancel" type="button">Cancel</button>
+      <button class="app-confirm-button primary" id="appConfirmOk" type="button">OK</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  (() => {
+    'use strict';
+
+    const dialog = document.getElementById('appConfirmDialog');
+    const title = document.getElementById('appConfirmTitle');
+    const message = document.getElementById('appConfirmMessage');
+    const closeButton = document.getElementById('appConfirmClose');
+    const cancelButton = document.getElementById('appConfirmCancel');
+    const okButton = document.getElementById('appConfirmOk');
+    let resolver = null;
+    let restoreFocus = null;
+
+    function defaults() {
+      const ja = (document.documentElement.lang || navigator.language || '').toLowerCase().startsWith('ja');
+      return ja
+        ? { title: '確認', confirmLabel: '実行する', cancelLabel: 'キャンセル' }
+        : { title: 'Confirm', confirmLabel: 'Continue', cancelLabel: 'Cancel' };
+    }
+
+    function finish(result) {
+      if (!dialog.open) return;
+      const currentResolver = resolver;
+      resolver = null;
+      dialog.close();
+      if (restoreFocus instanceof HTMLElement && restoreFocus.isConnected) restoreFocus.focus({ preventScroll: true });
+      restoreFocus = null;
+      if (currentResolver) currentResolver(result);
+    }
+
+    function ask(options = {}) {
+      if (dialog.open) finish(false);
+      const fallback = defaults();
+      title.textContent = options.title || fallback.title;
+      message.textContent = options.message || '';
+      cancelButton.textContent = options.cancelLabel || fallback.cancelLabel;
+      okButton.textContent = options.confirmLabel || fallback.confirmLabel;
+      okButton.classList.toggle('danger', options.tone === 'danger');
+      okButton.classList.toggle('primary', options.tone !== 'danger');
+      restoreFocus = document.activeElement;
+
+      return new Promise(resolve => {
+        resolver = resolve;
+        dialog.showModal();
+        requestAnimationFrame(() => cancelButton.focus({ preventScroll: true }));
+      });
+    }
+
+    closeButton.addEventListener('click', () => finish(false));
+    cancelButton.addEventListener('click', () => finish(false));
+    okButton.addEventListener('click', () => finish(true));
+    dialog.addEventListener('cancel', event => {
+      event.preventDefault();
+      finish(false);
+    });
+    dialog.addEventListener('click', event => {
+      const rect = dialog.getBoundingClientRect();
+      const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+      if (outside) finish(false);
+    });
+
+    window.AppConfirm = Object.freeze({ ask });
+  })();
+</script>

@@ -1,0 +1,26 @@
+{
+  "$schema": "./schemas/app-config.schema.json",
+  "name": "Handwriting Font Maker",
+  "nameJa": "手書きフォントメーカー",
+  "slug": "handwriting-font-maker",
+  "version": "1.0.0",
+  "description": "Create a TrueType font from handwriting directly in the browser.",
+  "descriptionJa": "ブラウザ上で書いた文字からTrueTypeフォントを作成します。",
+  "defaultLanguage": "auto",
+  "repository": {
+    "owner": "ttomohisa",
+    "name": "htmlapps-handwriting-font-maker"
+  },
+  "build": {
+    "output": "dist/index.html",
+    "blockRuntimeNetwork": true,
+    "selfExtract": {
+      "enabled": true,
+      "output": "dist/index.self-extract.html"
+    },
+    "sizeBudget": {
+      "readableWarningMb": 25,
+      "selfExtractWarningMb": 12
+    }
+  }
+}

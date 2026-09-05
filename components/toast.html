@@ -1,0 +1,91 @@
+<!--
+  Reusable toast / Undo component.
+  Copy/adapt the CSS, HTML, and JavaScript into src/index.template.html.
+  API: AppToast.show({ message, actionLabel, onAction, duration, tone })
+-->
+<style>
+  .app-toast {
+    position: fixed;
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(420px, calc(100vw - 36px));
+    padding: 10px 12px 10px 14px;
+    border: 1px solid var(--line, #dadbd6);
+    border-radius: 12px;
+    background: var(--surface, #fff);
+    color: var(--text, #20211f);
+    box-shadow: var(--shadow-md, 0 12px 34px rgba(25, 28, 24, .10));
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .app-toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .app-toast[data-tone="success"] { border-color: color-mix(in srgb, var(--accent, #16624f) 34%, var(--line, #dadbd6)); }
+  .app-toast[data-tone="warning"] { border-color: #c58a24; }
+  .app-toast-message { min-width: 0; flex: 1 1 auto; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+  .app-toast-action {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent, #16624f);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .app-toast-action:hover { background: var(--surface-hover, #e9e9e5); }
+  .app-toast-action[hidden] { display: none; }
+  @media (max-width: 520px) {
+    .app-toast { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); max-width: none; }
+  }
+</style>
+
+<div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default">
+  <span class="app-toast-message" id="appToastMessage"></span>
+  <button class="app-toast-action" id="appToastAction" type="button" hidden></button>
+</div>
+
+<script>
+  (() => {
+    const root = document.getElementById('appToast');
+    const message = document.getElementById('appToastMessage');
+    const action = document.getElementById('appToastAction');
+    let timer = 0;
+    let actionHandler = null;
+
+    function dismiss() {
+      clearTimeout(timer);
+      timer = 0;
+      root.classList.remove('show');
+      actionHandler = null;
+    }
+
+    function show({ message: text = '', actionLabel = '', onAction = null, duration = 3200, tone = 'default' } = {}) {
+      clearTimeout(timer);
+      message.textContent = String(text);
+      root.dataset.tone = tone;
+      actionHandler = typeof onAction === 'function' ? onAction : null;
+      action.textContent = actionLabel || '';
+      action.hidden = !actionHandler || !actionLabel;
+      root.classList.add('show');
+      if (duration > 0) timer = window.setTimeout(dismiss, duration);
+      return Object.freeze({ dismiss });
+    }
+
+    action.addEventListener('click', () => {
+      const handler = actionHandler;
+      dismiss();
+      if (handler) handler();
+    });
+
+    window.AppToast = Object.freeze({ show, dismiss });
+  })();
+</script>

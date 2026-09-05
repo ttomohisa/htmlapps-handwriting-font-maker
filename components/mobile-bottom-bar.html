@@ -1,0 +1,302 @@
+<!--
+  Reusable smartphone bottom navigation / workflow bar.
+
+  Recommended smartphone pattern for long multi-section tools:
+  - desktop: keep all sections visible in normal document flow;
+  - smartphone: add has-mobile-page-tabs to <body>, mark page containers with
+    .app-mobile-page, and connect nav items with data-mobile-page-target;
+  - only the active smartphone page is shown, so tapping the bottom tab feels
+    like changing app pages instead of merely scrolling a long document.
+
+  Backward-compatible section scrolling (data-mobile-target) and application
+  actions (data-mobile-action) are also supported.
+
+  Copy/adapt the CSS, markup, and script into src/index.template.html. The
+  component is dependency-free, offline, and hidden above 600px by default.
+-->
+<style>
+  :root {
+    --app-mobile-bottom-bar-height: 74px;
+    --app-mobile-bottom-accent: var(--accent, #16624f);
+    --app-mobile-bottom-accent-soft: var(--accent-soft, #e1f0ea);
+    --app-mobile-bottom-muted: var(--muted, #6b6f69);
+    --app-mobile-bottom-line: var(--line, #dadbd6);
+  }
+
+  .app-mobile-bottom-bar {
+    display: none;
+  }
+
+  /* Desktop keeps every page in normal document flow. */
+  .app-mobile-page {
+    display: block;
+  }
+
+  @media (max-width: 600px) {
+    body.has-mobile-bottom-bar {
+      padding-bottom: calc(var(--app-mobile-bottom-bar-height) + env(safe-area-inset-bottom));
+    }
+
+    /*
+      Page-tab mode. Only use has-mobile-page-tabs when the mobile UX benefits
+      from real page switching. The active class is managed by the helper.
+    */
+    body.has-mobile-page-tabs .app-mobile-page {
+      display: none;
+    }
+
+    body.has-mobile-page-tabs .app-mobile-page.is-mobile-active {
+      display: block;
+    }
+
+    .app-mobile-bottom-bar {
+      position: fixed;
+      z-index: 80;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: repeat(var(--app-mobile-bottom-items, 4), minmax(0, 1fr));
+      gap: 4px;
+      padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+      border-top: 1px solid color-mix(in srgb, var(--app-mobile-bottom-line) 82%, transparent);
+      background: rgba(255, 255, 255, .94);
+      box-shadow: 0 -8px 24px rgba(20, 22, 20, .06);
+      backdrop-filter: blur(18px) saturate(1.35);
+    }
+
+    .app-mobile-bottom-item {
+      position: relative;
+      min-width: 0;
+      min-height: 54px;
+      padding: 5px 4px;
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--app-mobile-bottom-muted);
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 3px;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 750;
+      line-height: 1.15;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-mobile-bottom-item svg {
+      width: 21px;
+      height: 21px;
+    }
+
+    .app-mobile-bottom-item span {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .app-mobile-bottom-item:hover,
+    .app-mobile-bottom-item:focus-visible,
+    .app-mobile-bottom-item.is-active,
+    .app-mobile-bottom-item[aria-current="page"] {
+      color: var(--app-mobile-bottom-accent);
+      background: var(--app-mobile-bottom-accent-soft);
+    }
+
+    .app-mobile-bottom-item.primary:not(:disabled) {
+      color: var(--app-mobile-bottom-accent);
+      background: var(--app-mobile-bottom-accent-soft);
+    }
+
+    .app-mobile-bottom-item:disabled {
+      opacity: .36;
+      cursor: default;
+      background: transparent;
+    }
+  }
+</style>
+
+<!--
+  Recommended example: four smartphone pages.
+
+  Pair these buttons with page containers such as:
+
+    <section id="overviewPage" class="app-mobile-page is-mobile-active">...</section>
+    <section id="mediaPage" class="app-mobile-page">...</section>
+    <section id="inputPage" class="app-mobile-page">...</section>
+    <section id="devicePage" class="app-mobile-page">...</section>
+
+  Add both has-mobile-bottom-bar and has-mobile-page-tabs to <body>.
+  At desktop widths all four sections remain visible. At <=600px only the
+  active page is visible.
+-->
+<nav
+  class="app-mobile-bottom-bar"
+  id="appMobileBottomBar"
+  style="--app-mobile-bottom-items: 4"
+  aria-label="Mobile navigation"
+>
+  <button class="app-mobile-bottom-item is-active" type="button" data-mobile-key="overview" data-mobile-page-target="overviewPage" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+    <span>Overview</span>
+  </button>
+  <button class="app-mobile-bottom-item" type="button" data-mobile-key="media" data-mobile-page-target="mediaPage">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11v10H4z"/><path d="m15 10 5-3v10l-5-3z"/></svg>
+    <span>Media</span>
+  </button>
+  <button class="app-mobile-bottom-item" type="button" data-mobile-key="input" data-mobile-page-target="inputPage">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16v10H4z"/><path d="M7 10h1m3 0h1m3 0h1M7 14h10"/></svg>
+    <span>Input</span>
+  </button>
+  <button class="app-mobile-bottom-item" type="button" data-mobile-key="device" data-mobile-page-target="devicePage">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/><path d="m5.6 5.6 2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg>
+    <span>Device</span>
+  </button>
+</nav>
+
+<script>
+  (() => {
+    'use strict';
+
+    function mountMobileBottomBar(root, options = {}) {
+      if (!(root instanceof HTMLElement)) throw new TypeError('A mobile bottom bar root element is required.');
+
+      const actionHandlers = options.actions || {};
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+      const mobileQuery = window.matchMedia?.('(max-width: 600px)') || null;
+      const buttons = Array.from(root.querySelectorAll('.app-mobile-bottom-item'));
+      const pageButtons = buttons.filter(button => button.dataset.mobilePageTarget);
+      let observer = null;
+      let currentPageKey = null;
+
+      function buttonByKey(key) {
+        return buttons.find(button => button.dataset.mobileKey === key) || null;
+      }
+
+      function pageEntryByKeyOrId(keyOrId) {
+        const button = pageButtons.find(candidate =>
+          candidate.dataset.mobileKey === keyOrId || candidate.dataset.mobilePageTarget === keyOrId
+        ) || null;
+        if (!button) return null;
+        const page = document.getElementById(button.dataset.mobilePageTarget);
+        return page ? { button, page } : null;
+      }
+
+      function setActive(key) {
+        for (const button of buttons) {
+          const active = button.dataset.mobileKey === key;
+          button.classList.toggle('is-active', active);
+          if (button.dataset.mobileTarget || button.dataset.mobilePageTarget) {
+            if (active) button.setAttribute('aria-current', 'page');
+            else button.removeAttribute('aria-current');
+          }
+        }
+      }
+
+      function setEnabled(key, enabled) {
+        const button = buttonByKey(key);
+        if (!button) return false;
+        button.disabled = !enabled;
+        return true;
+      }
+
+      function showPage(keyOrId, showOptions = {}) {
+        const entry = pageEntryByKeyOrId(keyOrId);
+        if (!entry) return false;
+
+        const key = entry.button.dataset.mobileKey || entry.button.dataset.mobilePageTarget;
+        for (const button of pageButtons) {
+          const page = document.getElementById(button.dataset.mobilePageTarget);
+          page?.classList.toggle('is-mobile-active', button === entry.button);
+        }
+
+        currentPageKey = key;
+        setActive(key);
+
+        if (mobileQuery?.matches && showOptions.scroll !== false) {
+          const topTarget = document.getElementById(options.pageTopTarget || '') || entry.page;
+          const top = Math.max(0, topTarget.getBoundingClientRect().top + window.scrollY - (options.pageTopOffset || 0));
+          window.scrollTo({ top, behavior: showOptions.behavior || (reduceMotion ? 'auto' : 'smooth') });
+        }
+
+        if (typeof options.onPageChange === 'function') {
+          options.onPageChange({ key, page: entry.page, button: entry.button });
+        }
+        return true;
+      }
+
+      function ensureInitialPage() {
+        if (!pageButtons.length) return;
+        const preferred = options.initialPage
+          ? pageEntryByKeyOrId(options.initialPage)
+          : null;
+        const marked = pageButtons.find(button => button.classList.contains('is-active')) || pageButtons[0];
+        const entry = preferred || pageEntryByKeyOrId(marked.dataset.mobileKey || marked.dataset.mobilePageTarget);
+        if (entry) showPage(entry.button.dataset.mobileKey || entry.button.dataset.mobilePageTarget, { scroll: false });
+      }
+
+      function clickHandler(event) {
+        const button = event.target.closest('.app-mobile-bottom-item');
+        if (!button || !root.contains(button) || button.disabled) return;
+
+        const pageTargetId = button.dataset.mobilePageTarget;
+        if (pageTargetId) {
+          showPage(button.dataset.mobileKey || pageTargetId);
+        }
+
+        const targetId = button.dataset.mobileTarget;
+        if (targetId) {
+          const target = document.getElementById(targetId);
+          if (target) {
+            target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+            setActive(button.dataset.mobileKey || targetId);
+          }
+        }
+
+        const actionName = button.dataset.mobileAction;
+        const handler = actionName ? actionHandlers[actionName] : null;
+        if (typeof handler === 'function') handler({ button, event });
+      }
+
+      root.addEventListener('click', clickHandler);
+      ensureInitialPage();
+
+      /* Section-scroll mode remains supported for older and action-heavy apps. */
+      const targetButtons = buttons.filter(button => button.dataset.mobileTarget && !button.dataset.mobilePageTarget);
+      if (options.observeSections !== false && !pageButtons.length && targetButtons.length && 'IntersectionObserver' in window) {
+        const targets = targetButtons
+          .map(button => ({ button, target: document.getElementById(button.dataset.mobileTarget) }))
+          .filter(entry => entry.target);
+
+        observer = new IntersectionObserver(entries => {
+          const visible = entries
+            .filter(entry => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (!visible) return;
+          const match = targets.find(entry => entry.target === visible.target);
+          if (match) setActive(match.button.dataset.mobileKey || match.button.dataset.mobileTarget);
+        }, { rootMargin: '-30% 0px -55% 0px', threshold: [0, .01, .25, .5] });
+
+        for (const entry of targets) observer.observe(entry.target);
+      }
+
+      return Object.freeze({
+        setActive,
+        setEnabled,
+        showPage,
+        currentPage: () => currentPageKey,
+        button: buttonByKey,
+        destroy() {
+          observer?.disconnect();
+          root.removeEventListener('click', clickHandler);
+        }
+      });
+    }
+
+    window.AppMobileBottomBar = Object.freeze({ mount: mountMobileBottomBar });
+  })();
+</script>

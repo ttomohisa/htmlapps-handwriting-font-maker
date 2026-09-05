@@ -1,0 +1,45 @@
+{
+  "$schema": "../schemas/dependencies.schema.json",
+  "dependencies": [
+    {
+      "id": "qrcode-generator",
+      "package": "qrcode-generator",
+      "version": "1.4.4",
+      "license": "MIT",
+      "homepage": "https://github.com/kazuhikoarase/qrcode-generator",
+      "assets": [
+        {
+          "key": "qrcode",
+          "path": "qrcode.js",
+          "mime": "text/javascript",
+          "stripSourceMapComment": true,
+          "compression": "none"
+        }
+      ],
+      "updates": {
+        "enabled": true,
+        "policy": "manual"
+      }
+    },
+    {
+      "id": "jsqr",
+      "package": "jsqr",
+      "version": "1.4.0",
+      "license": "Apache-2.0",
+      "homepage": "https://github.com/cozmo/jsQR",
+      "assets": [
+        {
+          "key": "decoder",
+          "path": "dist/jsQR.js",
+          "mime": "text/javascript",
+          "stripSourceMapComment": true,
+          "compression": "gzip"
+        }
+      ],
+      "updates": {
+        "enabled": true,
+        "policy": "manual"
+      }
+    }
+  ]
+}

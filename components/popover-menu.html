@@ -1,0 +1,104 @@
+<!--
+  Reusable compact popover menu.
+  Required attributes: data-popover-trigger + aria-controls, and data-popover-panel on the controlled panel.
+-->
+<style>
+  .app-popover { position: relative; display: inline-flex; }
+  .app-popover-panel {
+    position: absolute;
+    z-index: 55;
+    top: calc(100% + 7px);
+    right: 0;
+    width: min(280px, calc(100vw - 24px));
+    padding: 7px;
+    border: 1px solid var(--line, #dadbd6);
+    border-radius: 12px;
+    background: var(--surface, #fff);
+    box-shadow: var(--shadow-md, 0 12px 34px rgba(25, 28, 24, .10));
+    transform: translateX(var(--popover-shift-x, 0px));
+  }
+  .app-popover-panel[hidden] { display: none; }
+  .app-popover-item {
+    display: flex;
+    width: 100%;
+    min-height: 40px;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text, #20211f);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .app-popover-item:hover { background: var(--surface-hover, #e9e9e5); }
+</style>
+
+<div class="app-popover" data-popover-root>
+  <button type="button" data-popover-trigger aria-controls="examplePopoverPanel" aria-expanded="false">その他</button>
+  <div class="app-popover-panel" id="examplePopoverPanel" data-popover-panel hidden>
+    <button class="app-popover-item" type="button">操作</button>
+  </div>
+</div>
+
+<script>
+  (() => {
+    let openTrigger = null;
+
+    function panelFor(trigger) {
+      const id = trigger?.getAttribute('aria-controls');
+      return id ? document.getElementById(id) : null;
+    }
+
+    function close(trigger = openTrigger, { restoreFocus = false } = {}) {
+      if (!trigger) return;
+      const panel = panelFor(trigger);
+      trigger.setAttribute('aria-expanded', 'false');
+      if (panel) {
+        panel.hidden = true;
+        panel.style.removeProperty('--popover-shift-x');
+      }
+      if (openTrigger === trigger) openTrigger = null;
+      if (restoreFocus && trigger.isConnected) trigger.focus({ preventScroll: true });
+    }
+
+    function fitToViewport(panel) {
+      panel.style.removeProperty('--popover-shift-x');
+      const margin = 12;
+      const rect = panel.getBoundingClientRect();
+      let shift = 0;
+      if (rect.left < margin) shift += margin - rect.left;
+      if (rect.right + shift > innerWidth - margin) shift -= (rect.right + shift) - (innerWidth - margin);
+      if (shift) panel.style.setProperty('--popover-shift-x', `${Math.round(shift)}px`);
+    }
+
+    function open(trigger) {
+      const panel = panelFor(trigger);
+      if (!panel) return;
+      if (openTrigger && openTrigger !== trigger) close(openTrigger);
+      openTrigger = trigger;
+      trigger.setAttribute('aria-expanded', 'true');
+      panel.hidden = false;
+      requestAnimationFrame(() => fitToViewport(panel));
+    }
+
+    function toggle(trigger) {
+      if (trigger.getAttribute('aria-expanded') === 'true') close(trigger);
+      else open(trigger);
+    }
+
+    document.addEventListener('click', event => {
+      const trigger = event.target.closest('[data-popover-trigger]');
+      if (trigger) { toggle(trigger); return; }
+      if (openTrigger && !event.target.closest('[data-popover-panel]')) close(openTrigger);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && openTrigger) { event.preventDefault(); close(openTrigger, { restoreFocus: true }); }
+    });
+    addEventListener('resize', () => { if (openTrigger) close(openTrigger); });
+
+    window.AppPopoverMenu = Object.freeze({ open, close, toggle, closeAll: () => close(openTrigger) });
+  })();
+</script>

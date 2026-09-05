@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "app-config.schema.json",
+  "title": "Single HTML App configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "nameJa",
+    "slug",
+    "version",
+    "description",
+    "descriptionJa",
+    "defaultLanguage",
+    "repository",
+    "build"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nameJa": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?(?:[-+][0-9A-Za-z.-]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "descriptionJa": {
+      "type": "string",
+      "minLength": 1
+    },
+    "defaultLanguage": {
+      "enum": [
+        "auto",
+        "ja",
+        "en"
+      ]
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "name"
+      ],
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "output",
+        "blockRuntimeNetwork"
+      ],
+      "properties": {
+        "output": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blockRuntimeNetwork": {
+          "type": "boolean"
+        },
+        "selfExtract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "output"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "output": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "sizeBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "readableWarningMb",
+            "selfExtractWarningMb"
+          ],
+          "properties": {
+            "readableWarningMb": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "selfExtractWarningMb": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      }
+    }
+  }
+}

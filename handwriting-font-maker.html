@@ -1,0 +1,2188 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f5f5f2">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Handwriting Font Maker</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22%2316624F%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M8%2049%2020.5%2015h6L39%2049M12.5%2037h22%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M33.5%2054%2037%2044.5%2050.5%2031a3%203%200%200%201%204.2%200l2.3%202.3a3%203%200%200%201%200%204.2L43.5%2051%2033.5%2054Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%20%20%3Cpath%20d%3D%22m48.6%2032.9%206.5%206.5M37.2%2044.7l6.1%206.1M33.5%2054l4.1-9.2%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3C%2Fsvg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f5f2;
+      --surface: #ffffff;
+      --surface-muted: #f0f0ed;
+      --surface-hover: #e9e9e5;
+      --text: #20211f;
+      --muted: #666963;
+      --line: #dadbd6;
+      --line-strong: #bfc1ba;
+      --accent: #16624f;
+      --accent-hover: #0e503f;
+      --accent-soft: #e1f0ea;
+      --danger: #b3261e;
+      --danger-soft: #fae8e6;
+      --warning: #9a6700;
+      --warning-soft: #fff6d9;
+      --focus: #4d8bc7;
+      --shadow-sm: 0 1px 2px rgba(25, 28, 24, .08), 0 1px 6px rgba(25, 28, 24, .04);
+      --shadow-md: 0 12px 34px rgba(25, 28, 24, .10);
+      --radius: 12px;
+      --header-height: 66px;
+      --mobile-bar-height: 70px;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, textarea, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible, canvas:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--focus) 55%, transparent);
+      outline-offset: 2px;
+    }
+    button:disabled { cursor: not-allowed; opacity: .46; }
+    .app-header {
+      position: sticky;
+      z-index: 30;
+      top: 0;
+      min-height: var(--header-height);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      backdrop-filter: blur(16px) saturate(1.2);
+    }
+    .header-inner {
+      width: min(1180px, 100%);
+      min-height: var(--header-height);
+      margin: 0 auto;
+      padding: 10px clamp(14px, 2.8vw, 30px);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--accent);
+      box-shadow: none;
+    }
+    .brand-mark svg { width: 100%; height: 100%; display: block; }
+    .brand-copy { min-width: 0; }
+    .brand-name { margin: 0; font-size: 17px; line-height: 1.2; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-meta { margin: 2px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .version-badge { display: inline-flex; align-items: center; margin-left: 7px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface-muted); font-size: 10px; font-weight: 650; vertical-align: 2px; }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .language-button { padding: 5px 1px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 750; cursor: pointer; }
+    .language-button:hover { color: var(--text); }
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .icon-button:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-hover); }
+    .icon-button:active:not(:disabled) { transform: translateY(1px); }
+    .icon-button svg { width: 18px; height: 18px; display: block; }
+    .header-icon-button { width: auto; height: auto; padding: 5px 1px; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+    .header-icon-button:hover { border-color: transparent; background: transparent; color: var(--text); }
+    .main { width: min(1180px, 100%); margin: 0 auto; padding: 22px clamp(14px, 2.8vw, 30px) 54px; }
+    .page-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 0 2px 18px; }
+    .page-intro h1 { margin: 0; font-size: clamp(21px, 3vw, 27px); line-height: 1.3; letter-spacing: -.025em; }
+    .page-intro p { margin: 5px 0 0; max-width: 760px; color: var(--muted); font-size: 13px; }
+    .local-badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; margin-top: 3px; padding: 7px 10px; border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line)); border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .local-badge svg { width: 15px; height: 15px; display: block; }
+    .shell { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); }
+    .stepper { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; padding: 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-muted); }
+    .step-tab { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 7px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 750; cursor: pointer; }
+    .step-tab[aria-current="step"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+    .step-tab:disabled { cursor: not-allowed; }
+    .step-number { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 11px; }
+    .step-tab[aria-current="step"] .step-number { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .app-panel { padding: 20px; }
+    .app-panel[hidden] { display: none; }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .panel-head h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .write-head-copy { min-width: min(100%, 360px); flex: 1 1 360px; }
+    .write-progress-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .write-progress-meta strong { color: var(--text); font-weight: 760; }
+    .write-progress-track { position: relative; width: min(430px, 100%); height: 6px; margin-top: 7px; overflow: hidden; border-radius: 999px; background: var(--surface-muted); }
+    .write-progress-fill { display: block; width: 0%; height: 100%; border-radius: inherit; background: var(--accent); transition: width .18s ease; }
+    .write-panel-actions { align-items: center; justify-content: flex-end; }
+    .button.compact { min-height: 38px; padding: 7px 10px; font-size: 12px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 720; cursor: pointer; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+    .button[hidden] { display: none; }
+    .button:hover:not(:disabled) { border-color: var(--line-strong); background: var(--surface-hover); }
+    .button:active:not(:disabled) { transform: translateY(1px); }
+    .button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .button.primary:hover:not(:disabled) { border-color: var(--accent-hover); background: var(--accent-hover); }
+    .button.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 28%, var(--line)); }
+    .button svg { width: 17px; height: 17px; }
+    .field-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.45fr); gap: 18px; }
+    .field-card { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .field-card h3 { margin: 0 0 12px; font-size: 15px; }
+    .field { display: grid; gap: 7px; }
+    .field + .field { margin-top: 16px; }
+    .field-label { font-size: 12px; font-weight: 760; color: var(--text); }
+    .field-help { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .text-input, .custom-text { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); }
+    .text-input { min-height: 44px; padding: 9px 11px; }
+    .custom-text { min-height: 118px; padding: 11px 12px; resize: vertical; line-height: 1.6; }
+    .text-input:hover, .custom-text:hover { border-color: var(--line-strong); }
+    .set-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .check-card { position: relative; display: flex; align-items: flex-start; gap: 10px; min-height: 62px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); cursor: pointer; }
+    .check-card:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .check-card:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 44%, var(--line)); background: var(--accent-soft); }
+    .check-card input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--accent); flex: 0 0 auto; }
+    .check-copy { min-width: 0; }
+    .check-name { display: block; font-size: 13px; font-weight: 760; }
+    .check-count { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .selection-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-muted); }
+    .selection-count { font-size: 13px; }
+    .selection-count strong { font-size: 18px; color: var(--accent); }
+    .selection-note { color: var(--muted); font-size: 12px; }
+    .inline-warning { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--warning) 24%, var(--line)); border-radius: 10px; background: var(--warning-soft); color: #654b00; font-size: 12px; }
+    .inline-warning[hidden] { display: none; }
+    .inline-warning svg { width: 17px; height: 17px; flex: 0 0 auto; margin-top: 1px; }
+    .write-layout { display: grid; grid-template-columns: 190px minmax(320px, 1fr) minmax(230px, .7fr); gap: 14px; align-items: stretch; }
+    .glyph-sidebar, .drawing-card, .preview-card { min-width: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .glyph-sidebar { display: flex; flex-direction: column; max-height: 650px; overflow: hidden; }
+    .side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 12px 10px; border-bottom: 1px solid var(--line); }
+    .side-head strong { font-size: 13px; }
+    .side-head span { color: var(--muted); font-size: 11px; }
+    .glyph-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 10px; overflow: auto; }
+    .glyph-button { position: relative; display: grid; place-items: center; min-width: 0; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 18px; cursor: pointer; }
+    .glyph-button:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .glyph-button.current { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .glyph-button.done::after { content: ''; position: absolute; right: 4px; top: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .glyph-button.warning::after { background: var(--warning); box-shadow: 0 0 0 2px var(--warning-soft); }
+    .drawing-card { padding: 14px; }
+    .drawing-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .drawing-title-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+    .guide-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 720; cursor: pointer; user-select: none; }
+    .guide-toggle:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .guide-toggle:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 38%, var(--line)); color: var(--accent); background: var(--accent-soft); }
+    .guide-toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+    .glyph-heading { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+    .current-char { font-size: 30px; line-height: 1; font-weight: 650; }
+    .current-code { color: var(--muted); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .mobile-glyph-list-button { display: none; }
+    .canvas-frame { position: relative; width: min(100%, 560px); margin: 0 auto; aspect-ratio: 1; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,.015); }
+    #drawCanvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+    .canvas-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 28px); padding: 5px 9px; border-radius: 999px; background: rgba(255,255,255,.88); color: var(--muted); font-size: 11px; pointer-events: none; white-space: nowrap; opacity: .9; }
+    .canvas-hint.hidden { opacity: 0; }
+    .draw-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+    .tool-button { min-height: 42px; padding: 7px 8px; }
+    .pen-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .pen-row label { font-size: 12px; font-weight: 730; }
+    .pen-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .pen-value { min-width: 42px; text-align: right; color: var(--muted); font-size: 11px; }
+    .nav-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 12px; }
+    .preview-card { display: flex; flex-direction: column; padding: 14px; }
+    .preview-card h3 { margin: 0; font-size: 14px; }
+    .preview-help { margin: 3px 0 12px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .preview-glyph { display: grid; place-items: center; min-height: 160px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-muted); font-family: "HandFontPreview", sans-serif; font-size: 88px; line-height: 1; overflow: hidden; }
+    .preview-sizes { display: grid; gap: 7px; margin-top: 11px; user-select: none; }
+    .preview-line { display: grid; grid-template-columns: 37px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; }
+    .preview-line > span:first-child { color: var(--muted); font-size: 10px; text-align: right; }
+    .preview-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: "HandFontPreview", sans-serif; }
+    .preview-size-status { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; min-height: 22px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; font-weight: 760; line-height: 1; white-space: nowrap; }
+    .preview-size-status.ok { border-color: color-mix(in srgb, var(--accent) 26%, var(--line)); color: var(--accent); background: var(--accent-soft); }
+    .preview-size-status.advisory { border-color: var(--line-strong); color: var(--muted); background: var(--surface-muted); }
+    .preview-size-status.warning { border-color: color-mix(in srgb, var(--warning) 34%, var(--line)); color: #654b00; background: var(--warning-soft); }
+    .font-status { display: flex; align-items: flex-start; gap: 8px; margin-top: auto; padding: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .status-dot { width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; background: var(--line-strong); flex: 0 0 auto; }
+    .font-status.ready { color: var(--accent); }
+    .font-status.ready .status-dot { background: var(--accent); }
+    .font-status.error { color: var(--danger); }
+    .font-status.error .status-dot { background: var(--danger); }
+    .font-status.generating .status-dot { background: var(--warning); animation: pulse 1s ease-in-out infinite alternate; }
+    .quality-result { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; padding: 10px 11px; border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line)); border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+    .quality-result[hidden] { display: none; }
+    .quality-result.warning { border-color: color-mix(in srgb, var(--warning) 30%, var(--line)); background: var(--warning-soft); color: #654b00; }
+    .quality-result svg { width: 18px; height: 18px; margin-top: 1px; flex: 0 0 auto; }
+    .quality-result .quality-warning-icon, .quality-result.warning .quality-ok-icon { display: none; }
+    .quality-result.warning .quality-warning-icon { display: block; }
+    .quality-copy { min-width: 0; }
+    .quality-copy strong { display: block; font-size: 11px; line-height: 1.4; }
+    .quality-copy span { display: block; margin-top: 2px; font-size: 10px; line-height: 1.55; color: currentColor; opacity: .9; }
+    .quality-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 10px 11px; border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line)); border-radius: 10px; background: var(--accent-soft); }
+    .quality-summary.warning { border-color: color-mix(in srgb, var(--warning) 30%, var(--line)); background: var(--warning-soft); }
+    .quality-summary-copy { min-width: 0; }
+    .quality-summary-copy strong { display: block; font-size: 11px; }
+    .quality-summary-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .quality-summary.warning .quality-summary-copy strong { color: #654b00; }
+    .quality-summary .button { min-height: 36px; padding: 6px 10px; flex: 0 0 auto; }
+    .metric.warning strong { color: var(--warning); }
+    .export-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 16px; }
+    .review-card, .export-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .review-card h3, .export-card h3 { margin: 0; font-size: 15px; }
+    .review-card p, .export-card p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .review-text { width: 100%; min-height: 88px; margin-top: 13px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; resize: vertical; line-height: 1.6; }
+    .review-font { margin-top: 12px; padding: 18px; min-height: 150px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-muted); font-family: "HandFontPreview", sans-serif; font-size: 32px; line-height: 1.7; overflow-wrap: anywhere; }
+    .completion-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+    .metric { padding: 10px; border-radius: 10px; background: var(--surface-muted); }
+    .metric strong { display: block; font-size: 19px; }
+    .metric span { color: var(--muted); font-size: 10px; }
+    .filename-control { display: flex; align-items: center; width: 100%; min-height: 44px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+    .filename-input { min-width: 0; flex: 1 1 auto; height: 42px; padding: 8px 0 8px 11px; border: 0; outline: 0; background: transparent; }
+    .filename-extension { flex: 0 0 auto; padding: 0 11px 0 4px; color: var(--muted); font-size: 12px; }
+    .export-button { width: 100%; margin-top: 12px; min-height: 46px; }
+    .project-data-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .project-data-section h4 { margin: 0; font-size: 14px; }
+    .project-data-section p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .project-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+    .project-actions .button { justify-content: center; min-height: 42px; }
+    .panel-actions { flex-wrap: wrap; }
+    .export-meta { display: grid; gap: 7px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 12px; }
+    .meta-row strong { color: var(--text); font-weight: 650; text-align: right; }
+    .build-section { margin-top: 14px; padding: 0 2px; }
+    .build-section details { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .build-section summary { padding: 12px 14px; cursor: pointer; font-size: 12px; font-weight: 700; }
+    .build-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 14px 14px; }
+    .build-item { padding: 9px 10px; border-radius: 9px; background: var(--surface-muted); }
+    .build-item span { display: block; color: var(--muted); font-size: 10px; }
+    .build-item strong { display: block; margin-top: 2px; font-size: 12px; overflow-wrap: anywhere; }
+    footer { width: min(1180px, 100%); margin: 0 auto; padding: 0 clamp(14px, 2.8vw, 30px) 28px; color: var(--muted); font-size: 11px; text-align: center; }
+    .app-toast { position: fixed; z-index: 80; left: 50%; bottom: 20px; display: flex; align-items: center; gap: 12px; max-width: min(440px, calc(100vw - 36px)); padding: 10px 12px 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); opacity: 0; transform: translate(-50%, 12px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+    .app-toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+    .app-toast-message { min-width: 0; flex: 1 1 auto; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+    .app-toast-action { flex: 0 0 auto; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 800; cursor: pointer; }
+    .app-toast-action:hover { background: var(--surface-hover); }
+    .app-toast-action[hidden] { display: none; }
+    dialog { width: min(640px, calc(100% - 28px)); max-height: min(760px, calc(100dvh - 28px)); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); }
+    dialog::backdrop { background: rgba(15,17,14,.52); backdrop-filter: blur(4px); }
+    .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .dialog-header h2 { margin: 0; font-size: 17px; }
+    .dialog-body { padding: 20px 20px 28px; overflow: auto; max-height: calc(100dvh - 102px); }
+    .dialog-body h3 { margin: 25px 0 8px; padding-top: 19px; border-top: 1px solid color-mix(in srgb, var(--line) 78%, transparent); font-size: 14px; }
+    .dialog-body h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+    .dialog-body p, .dialog-body li { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .dialog-body p { margin: 8px 0 0; }
+    .dialog-body ul, .dialog-body ol { margin: 8px 0 0; padding-left: 22px; }
+    .dialog-body li + li { margin-top: 7px; }
+    .dialog-note { margin-top: 12px; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 10px; background: var(--accent-soft); color: var(--text) !important; }
+    .app-confirm-dialog { width: min(420px, calc(100% - 24px)); max-width: 100%; }
+    .app-confirm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px 13px; border-bottom: 1px solid var(--line); }
+    .app-confirm-title { margin: 0; font-size: 17px; }
+    .app-confirm-close { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
+    .app-confirm-close:hover { background: var(--surface-hover); }
+    .app-confirm-close svg { width: 19px; height: 19px; }
+    .app-confirm-body { padding: 18px; }
+    .app-confirm-message { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+    .app-confirm-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+    .app-confirm-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); font-size: 12px; font-weight: 760; cursor: pointer; }
+    .app-confirm-button:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .app-confirm-button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .app-confirm-button.danger { border-color: var(--danger); background: var(--danger); color: #fff; }
+    .mobile-bottom-bar { display: none; }
+    .glyph-picker-dialog { width: min(500px, calc(100% - 24px)); }
+    .glyph-picker-body { padding: 12px; overflow: auto; max-height: calc(100dvh - 90px); }
+    .glyph-picker-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; }
+    .glyph-picker-grid .glyph-button { min-height: 48px; aspect-ratio: auto; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @keyframes pulse { from { opacity: .45; } to { opacity: 1; } }
+    @media (max-width: 920px) {
+      .write-layout { grid-template-columns: 150px minmax(300px, 1fr); }
+      .preview-card { grid-column: 2; }
+      .glyph-sidebar { grid-row: 1 / span 2; }
+      .export-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .page-intro { align-items: stretch; flex-direction: column; gap: 10px; }
+      .local-badge { align-self: flex-start; }
+      .field-grid { grid-template-columns: 1fr; }
+      .write-layout { grid-template-columns: 1fr; }
+      .glyph-sidebar { display: none; }
+      .preview-card { grid-column: auto; }
+      .mobile-glyph-list-button { display: inline-flex; }
+      .build-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      :root { --header-height: 58px; }
+      body { padding-bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom)); }
+      .header-inner { padding-block: 8px; }
+      .brand-mark { width: 34px; height: 34px; border-radius: 10px; }
+      .brand-name { font-size: 15px; }
+      .brand-meta { display: none; }
+      .header-actions { gap: 11px; }
+      .main { padding-top: 17px; padding-bottom: 22px; }
+      .page-intro { padding-bottom: 14px; }
+      .page-intro p { font-size: 12px; }
+      .stepper { display: none; }
+      .app-panel { padding: 14px; }
+      .panel-head { flex-direction: column; gap: 10px; }
+      .panel-actions { width: 100%; }
+      .panel-actions .button { flex: 1 1 auto; }
+      .field-card { padding: 13px; }
+      .set-grid { grid-template-columns: 1fr; }
+      .selection-summary { align-items: stretch; flex-direction: column; }
+      .selection-summary .button { width: 100%; }
+      .write-head-copy { width: 100%; min-width: 0; flex: 0 1 auto; }
+      .write-progress-track { width: 100%; }
+      .write-panel-actions { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .write-panel-actions .button { width: 100%; min-width: 0; }
+      .write-panel-actions #backToSetupButton { grid-column: 1 / -1; }
+      .drawing-card { padding: 10px; }
+      .drawing-title-row { align-items: flex-start; }
+      .drawing-title-actions { flex-wrap: wrap; }
+      .guide-toggle { min-height: 40px; }
+      .current-char { font-size: 28px; }
+      .canvas-frame { border-radius: 10px; }
+      .canvas-hint { bottom: 10px; }
+      .preview-card { padding: 12px; }
+      .preview-size-status { min-width: 42px; padding-inline: 5px; }
+      .preview-glyph { min-height: 120px; font-size: 72px; }
+      .review-font { min-height: 130px; padding: 14px; font-size: 27px; }
+      .completion-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .metric { padding: 8px; }
+      .metric strong { font-size: 16px; }
+      footer { padding-bottom: 12px; }
+      .app-toast { left: 12px; right: 12px; bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom) + 12px); max-width: none; transform: translateY(12px); }
+      .app-toast.show { transform: translateY(0); }
+      .mobile-bottom-bar { position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: var(--mobile-bar-height); padding: 7px 8px calc(7px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: blur(16px); }
+      .mobile-tab { display: grid; place-items: center; align-content: center; gap: 2px; min-height: 48px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 760; cursor: pointer; }
+      .mobile-tab svg { width: 20px; height: 20px; }
+      .mobile-tab.active { color: var(--accent); background: var(--accent-soft); }
+      .mobile-tab:disabled { opacity: .35; }
+      .app-confirm-dialog, .glyph-picker-dialog { width: 100%; max-width: none; margin: auto 0 0; border-width: 1px 0 0; border-radius: 22px 22px 0 0; }
+      .app-confirm-body { padding: 12px 18px calc(env(safe-area-inset-bottom) + 18px); }
+      .app-confirm-actions { grid-template-columns: 1fr; gap: 10px; }
+      .app-confirm-button { min-height: 48px; font-size: 14px; }
+      .glyph-picker-grid { grid-template-columns: repeat(6, minmax(0,1fr)); }
+      dialog:not(.app-confirm-dialog):not(.glyph-picker-dialog) { width: calc(100% - 20px); max-height: calc(100dvh - 20px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="15" fill="#16624F"/>
+  <path d="M8 49 20.5 15h6L39 49M12.5 37h22" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M33.5 54 37 44.5 50.5 31a3 3 0 0 1 4.2 0l2.3 2.3a3 3 0 0 1 0 4.2L43.5 51 33.5 54Z" fill="none" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m48.6 32.9 6.5 6.5M37.2 44.7l6.1 6.1M33.5 54l4.1-9.2" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+        </div>
+        <div class="brand-copy">
+          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.0</span></p>
+          <p class="brand-meta" data-i18n="brandMeta">Single HTML · Fully local processing</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="language-button" id="languageButton" type="button" aria-label="Switch language">EN</button>
+        <button class="icon-button header-icon-button" id="helpButton" type="button" data-i18n-title="helpTitle" data-i18n-aria-label="helpTitle" title="使い方と注意事項" aria-label="使い方と注意事項">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.35 2.35 0 1 1 3.72 1.9c-.92.67-1.52 1.12-1.52 2.1"/><path d="M12 17h.01"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="page-intro" aria-labelledby="heroTitle">
+      <div>
+        <h1 id="heroTitle" data-i18n="introTitle">書いた文字を、そのままフォントへ</h1>
+        <p data-i18n="lead">文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。</p>
+      </div>
+      <div class="local-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg>
+        <span data-i18n="localBadge">完全ローカル処理</span>
+      </div>
+    </section>
+
+    <nav class="stepper" aria-label="Workflow">
+      <button class="step-tab" id="stepTabSetup" type="button" data-step="setup" aria-current="step"><span class="step-number">1</span><span data-i18n="stepSetup">文字を選ぶ</span></button>
+      <button class="step-tab" id="stepTabWrite" type="button" data-step="write" disabled><span class="step-number">2</span><span data-i18n="stepWrite">文字を書く</span></button>
+      <button class="step-tab" id="stepTabExport" type="button" data-step="export" disabled><span class="step-number">3</span><span data-i18n="stepExport">確認・保存</span></button>
+    </nav>
+
+    <!-- APP:BEGIN Handwriting Font Maker application. -->
+    <section class="shell app-panel" id="setupPanel" data-panel="setup" aria-labelledby="setupTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="setupTitle" data-i18n="setupTitle">作る文字を選ぶ</h2>
+          <p data-i18n="setupLead">必要な文字だけ選べます。空白は自動でフォントに含まれます。</p>
+        </div>
+        <div class="panel-actions">
+          <button class="button" id="loadProjectButtonTop" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 20h14"/></svg>
+            <span data-i18n="loadProject">作業データを読み込む</span>
+          </button>
+          <button class="button danger" id="newProjectButton" type="button" data-i18n="newProject">新しい作業</button>
+        </div>
+      </div>
+
+      <div class="field-grid">
+        <div class="field-card">
+          <h3 data-i18n="fontSettings">フォント設定</h3>
+          <label class="field" for="fontNameInput">
+            <span class="field-label" data-i18n="fontName">フォント名</span>
+            <input class="text-input" id="fontNameInput" type="text" maxlength="60" autocomplete="off" spellcheck="false" value="My Handwriting">
+            <span class="field-help" data-i18n="fontNameHelp">フォント内部の名前にも使われます。</span>
+          </label>
+          <label class="field" for="customTextInput">
+            <span class="field-label" data-i18n="customText">使いたい文字だけ追加</span>
+            <textarea class="custom-text" id="customTextInput" maxlength="1000" data-i18n-placeholder="customPlaceholder" placeholder="例: Browser Kitty 2026 / ありがとう"></textarea>
+            <span class="field-help" data-i18n="customHelp">同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。</span>
+          </label>
+          <div class="inline-warning" id="unsupportedWarning" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/></svg>
+            <span id="unsupportedWarningText"></span>
+          </div>
+        </div>
+
+        <div class="field-card">
+          <h3 data-i18n="characterSets">文字セット</h3>
+          <div class="set-grid">
+            <label class="check-card"><input id="setHiragana" type="checkbox" checked><span class="check-copy"><span class="check-name" data-i18n="hiragana">ひらがな</span><span class="check-count">46</span></span></label>
+            <label class="check-card"><input id="setKatakana" type="checkbox"><span class="check-copy"><span class="check-name" data-i18n="katakana">カタカナ</span><span class="check-count">46</span></span></label>
+            <label class="check-card"><input id="setUpper" type="checkbox"><span class="check-copy"><span class="check-name" data-i18n="uppercase">英大文字</span><span class="check-count">26</span></span></label>
+            <label class="check-card"><input id="setLower" type="checkbox"><span class="check-copy"><span class="check-name" data-i18n="lowercase">英小文字</span><span class="check-count">26</span></span></label>
+            <label class="check-card"><input id="setDigits" type="checkbox"><span class="check-copy"><span class="check-name" data-i18n="digits">数字</span><span class="check-count">10</span></span></label>
+            <label class="check-card"><input id="setSymbols" type="checkbox"><span class="check-copy"><span class="check-name" data-i18n="symbols">よく使う記号</span><span class="check-count">18</span></span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="selection-summary">
+        <div>
+          <div class="selection-count"><strong id="selectedCount">46</strong> <span data-i18n="charactersToWrite">文字を書きます</span></div>
+          <div class="selection-note" id="selectionNote" data-i18n="selectionNote">あとから文字セットへ戻って変更できます。</div>
+        </div>
+        <button class="button primary" id="startWritingButton" type="button">
+          <span data-i18n="startWriting">文字を書き始める</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="shell app-panel" id="writePanel" data-panel="write" aria-labelledby="writeTitle" hidden>
+      <div class="panel-head">
+        <div class="write-head-copy">
+          <h2 id="writeTitle" data-i18n="writeTitle">文字を書く</h2>
+          <div class="write-progress-meta"><span><strong id="progressText">0 / 0</strong> · <span data-i18n="autosave">自動保存</span></span><span id="progressPercent">0%</span></div>
+          <div class="write-progress-track" id="writeProgressTrack" role="progressbar" data-i18n-aria-label="progressLabel" aria-label="進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="write-progress-fill" id="writeProgressBar"></span></div>
+        </div>
+        <div class="panel-actions write-panel-actions">
+          <button class="button compact" id="nextIncompleteButton" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 12h6M13 10l2 2-2 2"/></svg><span data-i18n="nextIncomplete">次の未入力</span>
+          </button>
+          <button class="button compact" id="nextWarningButton" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg><span data-i18n="nextWarning">要確認へ</span>
+          </button>
+          <button class="button" id="backToSetupButton" type="button" data-i18n="editCharacters">文字を選び直す</button>
+        </div>
+      </div>
+
+      <div class="write-layout">
+        <aside class="glyph-sidebar" aria-label="Characters">
+          <div class="side-head"><strong data-i18n="characters">文字</strong><span id="sidebarProgress">0 / 0</span></div>
+          <div class="glyph-list" id="glyphList"></div>
+        </aside>
+
+        <div class="drawing-card">
+          <div class="drawing-title-row">
+            <div class="glyph-heading"><span class="current-char" id="currentChar">あ</span><span class="current-code" id="currentCode">U+3042</span></div>
+            <div class="drawing-title-actions">
+              <label class="guide-toggle" for="guideCharacterToggle">
+                <input id="guideCharacterToggle" type="checkbox" checked>
+                <span data-i18n="guideCharacter">お手本</span>
+              </label>
+              <button class="button mobile-glyph-list-button" id="openGlyphPickerButton" type="button" data-i18n="characterList">文字一覧</button>
+            </div>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="drawCanvas" width="1000" height="1000" tabindex="0" data-i18n-aria-label="canvasLabel" aria-label="手書き入力欄"></canvas>
+            <div class="canvas-hint" id="canvasHint" data-i18n="canvasHint">ここに文字を書いてください</div>
+          </div>
+          <div class="draw-toolbar">
+            <button class="button tool-button" id="undoButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 8 4 12l5 4"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg><span data-i18n="undo">戻す</span>
+            </button>
+            <button class="button tool-button danger" id="clearGlyphButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg><span data-i18n="clear">消去</span>
+            </button>
+            <button class="button tool-button" id="redoButton" type="button" disabled>
+              <span data-i18n="redo">やり直す</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 8 5 4-5 4"/><path d="M19 12h-8a6 6 0 0 0-6 6"/></svg>
+            </button>
+          </div>
+          <div class="pen-row">
+            <label for="penWidthInput" data-i18n="penWidth">線の太さ</label>
+            <input id="penWidthInput" type="range" min="28" max="100" step="2" value="56">
+            <span class="pen-value" id="penWidthValue">56</span>
+          </div>
+          <div class="nav-row">
+            <button class="button" id="previousCharButton" type="button" disabled><span aria-hidden="true">←</span><span data-i18n="previous">前へ</span></button>
+            <button class="button primary" id="nextCharButton" type="button"><span id="nextCharLabel" data-i18n="next">次へ</span><span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+
+        <aside class="preview-card">
+          <h3 data-i18n="fontPreview">フォント化結果</h3>
+          <p class="preview-help" data-i18n="fontPreviewHelp">Canvasの見た目ではなく、生成したTTFを読み直して表示します。</p>
+          <div class="preview-glyph" id="previewGlyph">あ</div>
+          <div class="preview-sizes" aria-label="Font size checks">
+            <div class="preview-line"><span>12px</span><span class="preview-text" style="font-size:12px" id="preview12">あいう</span><span class="preview-size-status" id="previewStatus12" data-size="12">—</span></div>
+            <div class="preview-line"><span>16px</span><span class="preview-text" style="font-size:16px" id="preview16">あいう</span><span class="preview-size-status" id="previewStatus16" data-size="16">—</span></div>
+            <div class="preview-line"><span>24px</span><span class="preview-text" style="font-size:24px" id="preview24">あいう</span><span class="preview-size-status" id="previewStatus24" data-size="24">—</span></div>
+            <div class="preview-line"><span>48px</span><span class="preview-text" style="font-size:48px" id="preview48">あ</span><span class="preview-size-status" id="previewStatus48" data-size="48">—</span></div>
+          </div>
+          <div class="quality-result" id="qualityResult" hidden role="status" aria-live="polite">
+            <svg class="quality-ok-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16.5 9"/></svg>
+            <svg class="quality-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/></svg>
+            <div class="quality-copy"><strong id="qualityResultTitle"></strong><span id="qualityResultDetail"></span></div>
+          </div>
+          <div class="font-status" id="fontStatus" role="status" aria-live="polite"><span class="status-dot"></span><span id="fontStatusText" data-i18n="fontStatusEmpty">文字を書くと実フォントの確認ができます。</span></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="shell app-panel" id="exportPanel" data-panel="export" aria-labelledby="exportTitle" hidden>
+      <div class="panel-head">
+        <div>
+          <h2 id="exportTitle" data-i18n="exportTitle">確認して保存</h2>
+          <p data-i18n="exportLead">生成したフォントで文章を確認してから保存できます。</p>
+        </div>
+        <div class="panel-actions"><button class="button" id="backToWriteButton" type="button" data-i18n="backToWriting">文字を書く画面へ</button></div>
+      </div>
+      <div class="export-layout">
+        <div class="review-card">
+          <h3 data-i18n="tryFont">文章で確認</h3>
+          <p data-i18n="tryFontHelp">収録していない文字は端末の通常フォントで表示されます。</p>
+          <textarea class="review-text" id="reviewText" data-i18n-placeholder="reviewPlaceholder" placeholder="今日はいい天気です。Browser Kitty 2026"></textarea>
+          <div class="review-font" id="reviewFont"></div>
+          <div class="completion-grid">
+            <div class="metric"><strong id="completedMetric">0</strong><span data-i18n="completed">入力済み</span></div>
+            <div class="metric"><strong id="remainingMetric">0</strong><span data-i18n="remaining">未入力</span></div>
+            <div class="metric"><strong id="fontSizeMetric">—</strong><span data-i18n="fontSize">TTFサイズ</span></div>
+            <div class="metric" id="qualityMetric"><strong id="qualityMetricValue">0</strong><span data-i18n="needsReview">要確認</span></div>
+          </div>
+          <div class="quality-summary" id="qualitySummary">
+            <div class="quality-summary-copy"><strong id="qualitySummaryTitle"></strong><span id="qualitySummaryText"></span></div>
+            <button class="button" id="reviewWarningsButton" type="button" data-i18n="reviewWarnings" hidden>確認する</button>
+          </div>
+        </div>
+        <div class="export-card">
+          <h3 data-i18n="saveFont">フォントを保存</h3>
+          <p data-i18n="saveFontHelp">v1.0.0ではTrueType (.ttf) に対応しています。</p>
+          <label class="field" for="outputFilename" style="margin-top:14px">
+            <span class="field-label" data-i18n="outputFilename">ファイル名</span>
+            <span class="filename-control">
+              <input class="filename-input" id="outputFilename" type="text" maxlength="120" autocomplete="off" spellcheck="false" value="handwriting-font" aria-describedby="outputFilenameHint">
+              <span class="filename-extension" aria-hidden="true">.ttf</span>
+            </span>
+            <span class="sr-only" id="outputFilenameHint" data-i18n="outputFilenameHint">拡張子 .ttf は自動で付きます。</span>
+          </label>
+          <button class="button primary export-button" id="downloadButton" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+            <span data-i18n="downloadTtf">TTFを保存</span>
+          </button>
+          <div class="export-meta">
+            <div class="meta-row"><span data-i18n="fontFamily">フォント名</span><strong id="exportFontName">—</strong></div>
+            <div class="meta-row"><span data-i18n="glyphCount">収録文字</span><strong id="exportGlyphCount">0</strong></div>
+            <div class="meta-row"><span data-i18n="format">形式</span><strong>TrueType / glyf</strong></div>
+            <div class="meta-row"><span data-i18n="processing">処理</span><strong data-i18n="fullyLocal">完全ローカル</strong></div>
+          </div>
+          <div class="project-data-section">
+            <h4 data-i18n="projectData">作業データ</h4>
+            <p data-i18n="projectDataHelp">書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。</p>
+            <div class="project-actions">
+              <button class="button" id="saveProjectFileButton" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+                <span data-i18n="saveProjectFile">作業データを保存</span>
+              </button>
+              <button class="button" id="loadProjectButtonExport" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 20h14"/></svg>
+                <span data-i18n="loadProject">作業データを読み込む</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- APP:END -->
+
+    <section class="build-section">
+      <details>
+        <summary data-i18n="buildInfo">ビルド情報</summary>
+        <div class="build-grid">
+          <div class="build-item"><span data-i18n="appVersion">アプリ版数</span><strong id="buildVersion">—</strong></div>
+          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
+          <div class="build-item"><span data-i18n="dependencies">内包依存</span><strong id="dependencyCount">0</strong></div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer><span id="footerName">Handwriting Font Maker</span> · MIT License · <span data-i18n="footer">ブラウザ内でフォントを生成します</span></footer>
+
+  <nav class="mobile-bottom-bar" aria-label="Workflow">
+    <button class="mobile-tab active" id="mobileTabSetup" type="button" data-step="setup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg><span data-i18n="mobileSetup">文字</span>
+    </button>
+    <button class="mobile-tab" id="mobileTabWrite" type="button" data-step="write" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 21 4.4-1 11-11a1.7 1.7 0 0 0 0-2.4l-1-1a1.7 1.7 0 0 0-2.4 0L4 16.6 3 21Z"/><path d="m14.1 6.5 3.4 3.4"/><path d="m4.9 17.5 1.6 1.6"/></svg><span data-i18n="mobileWrite">書く</span>
+    </button>
+    <button class="mobile-tab" id="mobileTabExport" type="button" data-step="export" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span data-i18n="mobileExport">保存</span>
+    </button>
+  </nav>
+
+  <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default">
+    <span class="app-toast-message" id="appToastMessage"></span>
+    <button class="app-toast-action" id="appToastAction" type="button" hidden></button>
+  </div>
+
+  <input id="projectFileInput" type="file" accept=".json,.handfont.json,application/json" hidden>
+
+  <dialog class="app-confirm-dialog" id="appConfirmDialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
+    <div class="app-confirm-header">
+      <h2 class="app-confirm-title" id="appConfirmTitle">確認</h2>
+      <button class="app-confirm-close" id="appConfirmClose" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="app-confirm-body">
+      <p class="app-confirm-message" id="appConfirmMessage"></p>
+      <div class="app-confirm-actions">
+        <button class="app-confirm-button" id="appConfirmCancel" type="button">キャンセル</button>
+        <button class="app-confirm-button primary" id="appConfirmOk" type="button">実行する</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="glyph-picker-dialog" id="glyphPickerDialog" aria-labelledby="glyphPickerTitle">
+    <div class="dialog-header">
+      <h2 id="glyphPickerTitle" data-i18n="characterList">文字一覧</h2>
+      <button class="icon-button" id="closeGlyphPickerButton" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="glyph-picker-body"><div class="glyph-picker-grid" id="glyphPickerGrid"></div></div>
+  </dialog>
+
+  <dialog id="helpDialog" aria-labelledby="helpTitle">
+    <div class="dialog-header">
+      <h2 id="helpTitle" data-i18n="helpTitle">使い方と注意事項</h2>
+      <button class="icon-button" id="closeHelpButton" type="button" data-i18n-title="close" data-i18n-aria-label="close" title="閉じる" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+    </div>
+    <div class="dialog-body">
+      <!-- APP:HELP:BEGIN Handwriting Font Maker help. -->
+      <h3 data-i18n="helpBasicsTitle">基本操作</h3>
+      <ol>
+        <li data-i18n="helpStep1">作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。</li>
+        <li data-i18n="helpStep2">文字を書く画面で、薄いお手本文字をなぞるようにマウス・指・ペンで書けます。お手本はON/OFFでき、戻す・やり直す・消去も使えます。</li>
+        <li data-i18n="helpStep3">「確認・保存」で実際に生成したフォントの表示を確認し、TTFを保存します。</li>
+      </ol>
+      <h3 data-i18n="helpPrivacyTitle">プライバシー</h3>
+      <p data-i18n="helpPrivacyBody">手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。</p>
+      <h3 data-i18n="helpQualityTitle">v1.0.0の変換方式</h3>
+      <p data-i18n="helpQualityBody">書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。v1.0.0では生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。</p>
+      <h3 data-i18n="helpNotesTitle">注意事項</h3>
+      <ul>
+        <li data-i18n="helpNoteV01">v1.0.0はTrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。</li>
+        <li data-i18n="helpNoteStorage">作業は端末内へ自動保存します。作業データをJSONで明示保存・読み込みできるため、バックアップや別端末への移動にも使えます。</li>
+        <li data-i18n="helpNoteUnicode">v1.0.0はBMP内の文字を対象にしています。絵文字など一部の文字は対象外です。</li>
+      </ul>
+      <p class="dialog-note" data-i18n="helpOffline">配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。</p>
+      <!-- APP:HELP:END -->
+    </div>
+  </dialog>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.0","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
+      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-09-05T17:04:46.0353839Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.0"},"dependencies":[]};
+      // Asset payloads are Base64 exactly once. The JSON bundle itself is embedded directly.
+      const assetBundle = {"schemaVersion":2,"dependencies":{}};
+      const blobUrls = new Set();
+      const assetByteCache = new Map();
+
+      function decodeBase64Bytes(base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        return bytes;
+      }
+      function getAsset(dependencyId, assetKey) {
+        const asset = assetBundle.dependencies?.[dependencyId]?.assets?.[assetKey];
+        if (!asset) throw new Error(`Embedded asset not found: ${dependencyId}/${assetKey}`);
+        return asset;
+      }
+      async function inflateAsset(asset) {
+        const stored = decodeBase64Bytes(asset.base64);
+        if (!asset.compression || asset.compression === 'none') return stored;
+        if (asset.compression !== 'gzip') throw new Error(`Unsupported embedded asset compression: ${asset.compression}`);
+        if (typeof DecompressionStream !== 'function') throw new Error('This browser cannot expand gzip-compressed embedded assets.');
+        const stream = new Blob([stored]).stream().pipeThrough(new DecompressionStream('gzip'));
+        const expanded = new Uint8Array(await new Response(stream).arrayBuffer());
+        if (Number.isFinite(asset.originalBytes) && expanded.byteLength !== asset.originalBytes) throw new Error('Embedded gzip asset size mismatch.');
+        return expanded;
+      }
+      window.StandaloneAssets = Object.freeze({
+        manifest: BUILD_MANIFEST,
+        list() { return Object.entries(assetBundle.dependencies || {}).flatMap(([dependencyId, dependency]) => Object.keys(dependency.assets || {}).map(assetKey => `${dependencyId}/${assetKey}`)); },
+        has(dependencyId, assetKey) { return Boolean(assetBundle.dependencies?.[dependencyId]?.assets?.[assetKey]); },
+        bytes(dependencyId, assetKey) { const asset = getAsset(dependencyId, assetKey); if (asset.compression && asset.compression !== 'none') throw new Error(`Embedded asset ${dependencyId}/${assetKey} is gzip-compressed; use await StandaloneAssets.bytesAsync().`); return decodeBase64Bytes(asset.base64); },
+        async bytesAsync(dependencyId, assetKey) { const cacheKey = `${dependencyId}/${assetKey}`; if (!assetByteCache.has(cacheKey)) assetByteCache.set(cacheKey, inflateAsset(getAsset(dependencyId, assetKey))); return new Uint8Array(await assetByteCache.get(cacheKey)); },
+        text(dependencyId, assetKey) { return new TextDecoder().decode(this.bytes(dependencyId, assetKey)); },
+        async textAsync(dependencyId, assetKey) { return new TextDecoder().decode(await this.bytesAsync(dependencyId, assetKey)); },
+        blobUrl(dependencyId, assetKey) { const asset = getAsset(dependencyId, assetKey); const url = URL.createObjectURL(new Blob([this.bytes(dependencyId, assetKey)], { type: asset.mime || 'application/octet-stream' })); blobUrls.add(url); return url; },
+        async blobUrlAsync(dependencyId, assetKey) { const asset = getAsset(dependencyId, assetKey); const url = URL.createObjectURL(new Blob([await this.bytesAsync(dependencyId, assetKey)], { type: asset.mime || 'application/octet-stream' })); blobUrls.add(url); return url; },
+        async loadClassicScript(dependencyId, assetKey, globalName = '') { const sourceUrl = await this.blobUrlAsync(dependencyId, assetKey); try { await new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = sourceUrl; script.onload = resolve; script.onerror = () => reject(new Error(`Failed to load embedded script: ${dependencyId}/${assetKey}`)); document.head.append(script); }); return globalName ? window[globalName] : true; } finally { URL.revokeObjectURL(sourceUrl); blobUrls.delete(sourceUrl); } },
+        async importModule(dependencyId, assetKey) { const sourceUrl = await this.blobUrlAsync(dependencyId, assetKey); try { return await import(sourceUrl); } finally { URL.revokeObjectURL(sourceUrl); blobUrls.delete(sourceUrl); } }
+      });
+      window.addEventListener('pagehide', () => { blobUrls.forEach(url => URL.revokeObjectURL(url)); blobUrls.clear(); });
+
+      const $ = selector => document.querySelector(selector);
+      const $$ = selector => [...document.querySelectorAll(selector)];
+      const STORAGE_KEY = 'browser-kitty-handwriting-font-maker-v0.1';
+      const MAX_CHARS = 180;
+      const MAX_POINTS = 80000;
+      const LOGICAL_SIZE = 1000;
+      const UPM = 2048;
+      const PREVIEW_FAMILY = 'HandFontPreview';
+      const characterSets = Object.freeze({
+        hiragana: [...'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん'],
+        katakana: [...'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン'],
+        upper: [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'],
+        lower: [...'abcdefghijklmnopqrstuvwxyz'],
+        digits: [...'0123456789'],
+        symbols: [...'。、！？・「」()[]+-=/&@#%:;']
+      });
+
+      const translations = {
+        ja: {
+          brandMeta: '単一HTML・完全ローカル処理', introTitle: '書いた文字を、そのままフォントへ', lead: '文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。', localBadge: '完全ローカル処理',
+          helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
+          setupTitle: '作る文字を選ぶ', setupLead: '必要な文字だけ選べます。空白は自動でフォントに含まれます。', projectData: '作業データ', projectDataHelp: '書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。', saveProjectFile: '作業データを保存', loadProject: '作業データを読み込む', projectSaved: '作業データを保存しました。', projectLoaded: '作業データを読み込みました。', projectLoadFailed: '作業データを読み込めませんでした。ファイルが壊れているか、このアプリの形式ではない可能性があります。', projectLoadConfirmTitle: '作業データを読み込みますか？', projectLoadConfirmMessage: '現在の手書き内容と設定は、読み込む作業データで置き換わります。', projectLoadConfirm: '読み込む', newProject: '新しい作業', fontSettings: 'フォント設定', fontName: 'フォント名', fontNameHelp: 'フォント内部の名前にも使われます。', customText: '使いたい文字だけ追加', customPlaceholder: '例: Browser Kitty 2026 / ありがとう', customHelp: '同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。', characterSets: '文字セット', hiragana: 'ひらがな', katakana: 'カタカナ', uppercase: '英大文字', lowercase: '英小文字', digits: '数字', symbols: 'よく使う記号', charactersToWrite: '文字を書きます', selectionNote: 'あとから文字セットへ戻って変更できます。', startWriting: '文字を書き始める',
+          writeTitle: '文字を書く', progressLabel: '入力進捗', nextIncomplete: '次の未入力', nextWarning: '要確認へ', reviewAndSave: '確認・保存', guideCharacter: 'お手本', autosave: '自動保存', editCharacters: '文字を選び直す', characters: '文字', characterList: '文字一覧', canvasLabel: '手書き入力欄', canvasHint: 'ここに文字を書いてください', undo: '戻す', redo: 'やり直す', clear: '消去', penWidth: '線の太さ', previous: '前へ', next: '次へ', fontPreview: 'フォント化結果', fontPreviewHelp: '生成したTTFを12 / 16 / 24 / 48pxで読み直し、各サイズの見え方を確認します。', fontStatusEmpty: '文字を書くと実フォントの確認ができます。', fontStatusGenerating: 'フォントを生成しています…', fontStatusReady: '生成したTTFで表示しています。', fontStatusError: 'フォントを生成できませんでした。文字を少し書き直してください。', needsReview: '要確認', sizeOk: 'OK', sizeAdvisory: '参考', sizeWarning: '要確認', sizeChecking: '確認中', qualitySizesWarning: sizes => `${sizes}で要確認です。`, reviewWarnings: '確認する', qualityChecking: '字形を確認しています…', qualityCheckingDetail: '生成したフォントを12 / 16 / 24 / 48pxで確認しています。', qualityOk: '確認したサイズで大きな問題は見つかりませんでした', qualityAdvisory: '12pxは参考確認です', qualityWarning: '小さいサイズで形が変わる可能性があります', qualityDetailOk: '16 / 24pxを48pxの実フォント表示と比較しました。12pxは参考表示です。', qualityDetailAdvisory: '12pxだけ細部が変わる可能性があります。小さい文字では一般的に起こるため、要確認には数えません。', qualityDetailGap: '16pxで別の線同士の間隔がかなり狭くなっています。実フォント表示を確認してください。', qualityDetailTopology: '48pxでは分かれている部分や内側の空間が、小さいサイズでは結合・消失しています。', qualityDetailBoth: '小さいサイズで形の結合・消失があり、線同士の間隔も狭くなっています。', qualitySummaryOk: '要確認の文字はありません', qualitySummaryOkDetail: '16 / 24pxを中心に実フォントの形を確認しました。12pxは参考表示です。', qualitySummaryEmpty: '字形チェックはまだありません', qualitySummaryEmptyDetail: '文字を書くと自動で確認します。', qualitySummaryWarning: count => `${count}文字を確認してください`,
+          exportTitle: '確認して保存', exportLead: '生成したフォントで文章を確認してから保存できます。', backToWriting: '文字を書く画面へ', tryFont: '文章で確認', tryFontHelp: '収録していない文字は端末の通常フォントで表示されます。', reviewPlaceholder: '今日はいい天気です。Browser Kitty 2026', completed: '入力済み', remaining: '未入力', fontSize: 'TTFサイズ', saveFont: 'フォントを保存', saveFontHelp: 'v1.0.0ではTrueType (.ttf) に対応しています。', outputFilename: 'ファイル名', outputFilenameHint: '拡張子 .ttf は自動で付きます。', downloadTtf: 'TTFを保存', fontFamily: 'フォント名', glyphCount: '収録文字', format: '形式', processing: '処理', fullyLocal: '完全ローカル',
+          buildInfo: 'ビルド情報', appVersion: 'アプリ版数', builtAt: '生成日時', dependencies: '内包依存', footer: 'ブラウザ内でフォントを生成します',
+          helpBasicsTitle: '基本操作', helpStep1: '作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。', helpStep2: '文字を書く画面で、薄いお手本文字をなぞるようにマウス・指・ペンで書けます。お手本はON/OFFでき、戻す・やり直す・消去も使えます。', helpStep3: '「確認・保存」で実際に生成したフォントの表示を確認し、TTFを保存します。', helpPrivacyTitle: 'プライバシー', helpPrivacyBody: '手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。', helpQualityTitle: 'v1.0.0の変換方式', helpQualityBody: '書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。v1.0.0では生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。', helpNotesTitle: '注意事項', helpNoteV01: 'v1.0.0はTrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。', helpNoteStorage: '作業は端末内へ自動保存します。v1.0.0では作業データをJSONで明示保存・読み込みできるため、バックアップや別端末への移動にも使えます。', helpNoteUnicode: 'v1.0.0はBMP内の文字を対象にしています。絵文字など一部の文字は対象外です。', helpOffline: '配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。',
+          unsupported: count => `${count}文字はv1.0.0の対象外です（絵文字などBMP外の文字）。`, limitReached: `v1.0.0では最大${MAX_CHARS}文字までです。先頭から${MAX_CHARS}文字を使います。`, noCharacters: '1文字以上選んでください。', clearedGlyph: 'この文字を消去しました。', undoAction: '元に戻す', restored: '元に戻しました。', projectReset: '作業を初期化しました。', newProjectTitle: '新しい作業を始めますか？', newProjectMessage: '現在の手書きデータと設定を端末内の自動保存から削除します。', cancel: 'キャンセル', reset: '初期化する', downloaded: 'TTFを保存しました。', autosaveFailed: '端末内への自動保存ができませんでした。必要ならTTFを早めに保存してください。', restoredProject: '前回の作業を復元しました。', restoreFailed: '保存されていた作業を読み込めなかったため、新しい状態で開始しました。', pointLimit: 'この作業では点の数が上限に達しました。不要な文字を減らして続けてください。'
+        },
+        en: {
+          brandMeta: 'Single HTML · Fully local processing', introTitle: 'Turn your handwriting into a font', lead: 'Write characters in the browser and save them as a TrueType font. The app builds font outlines directly from pen coordinates instead of tracing a raster image.', localBadge: 'Fully local processing',
+          helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
+          setupTitle: 'Choose characters', setupLead: 'Select only the characters you need. Space is added automatically.', projectData: 'Project data', projectDataHelp: 'Save handwriting strokes and settings as JSON, then load them on another device to continue.', saveProjectFile: 'Save project data', loadProject: 'Load project data', projectSaved: 'Saved the project data.', projectLoaded: 'Loaded the project data.', projectLoadFailed: 'The project data could not be loaded. The file may be damaged or not created by this app.', projectLoadConfirmTitle: 'Load project data?', projectLoadConfirmMessage: 'Your current handwriting and settings will be replaced by the loaded project data.', projectLoadConfirm: 'Load', newProject: 'New project', fontSettings: 'Font settings', fontName: 'Font name', fontNameHelp: 'This is also used inside the generated font.', customText: 'Add only the characters you need', customPlaceholder: 'Example: Browser Kitty 2026 / Hello!', customHelp: 'Duplicate characters are removed. v1.0.0 supports BMP characters.', characterSets: 'Character sets', hiragana: 'Hiragana', katakana: 'Katakana', uppercase: 'Uppercase A-Z', lowercase: 'Lowercase a-z', digits: 'Digits', symbols: 'Common symbols', charactersToWrite: 'characters to write', selectionNote: 'You can return here and change the selection later.', startWriting: 'Start writing',
+          writeTitle: 'Write characters', progressLabel: 'Writing progress', nextIncomplete: 'Next unfinished', nextWarning: 'Next review', reviewAndSave: 'Review & save', guideCharacter: 'Guide', autosave: 'Autosaved locally', editCharacters: 'Edit character selection', characters: 'Characters', characterList: 'Character list', canvasLabel: 'Handwriting input', canvasHint: 'Write the character here', undo: 'Undo', redo: 'Redo', clear: 'Clear', penWidth: 'Pen width', previous: 'Previous', next: 'Next', fontPreview: 'Generated font', fontPreviewHelp: 'The generated TTF is reloaded at 12 / 16 / 24 / 48px so each size can be checked.', fontStatusEmpty: 'Write a character to preview the actual font.', fontStatusGenerating: 'Generating the font…', fontStatusReady: 'Previewing the generated TTF.', fontStatusError: 'The font could not be generated. Try rewriting this character.', needsReview: 'Review', sizeOk: 'OK', sizeAdvisory: 'Reference', sizeWarning: 'Review', sizeChecking: 'Checking', qualitySizesWarning: sizes => `Review at ${sizes}.`, reviewWarnings: 'Review', qualityChecking: 'Checking the glyph…', qualityCheckingDetail: 'The generated font is being checked at 12 / 16 / 24 / 48px.', qualityOk: 'No major issue was found at the checked sizes', qualityAdvisory: '12px is a reference check', qualityWarning: 'The glyph shape may change at small sizes', qualityDetailOk: 'Compared the actual font at 16 / 24px against 48px. The 12px row is informational.', qualityDetailAdvisory: 'Only the 12px rendering loses some detail. This is common at very small text sizes, so it is not counted as a review warning.', qualityDetailGap: 'Separate strokes become unusually tight at 16px. Review the actual font preview.', qualityDetailTopology: 'Parts that are separate, or enclosed spaces visible at 48px, merge or disappear at a smaller size.', qualityDetailBoth: 'The smaller rendering changes shape and separate strokes also become unusually tight.', qualitySummaryOk: 'No glyphs need review', qualitySummaryOkDetail: 'Checked actual font shape mainly at 16 / 24px. The 12px row is informational.', qualitySummaryEmpty: 'No glyph checks yet', qualitySummaryEmptyDetail: 'Checks run automatically after you write a character.', qualitySummaryWarning: count => `${count} glyph(s) need review`,
+          exportTitle: 'Review and save', exportLead: 'Try a sentence using the generated font before saving it.', backToWriting: 'Back to writing', tryFont: 'Try a sentence', tryFontHelp: 'Characters not included in your font fall back to the system font.', reviewPlaceholder: 'Hello from Browser Kitty 2026', completed: 'Completed', remaining: 'Remaining', fontSize: 'TTF size', saveFont: 'Save font', saveFontHelp: 'v1.0.0 exports TrueType (.ttf).', outputFilename: 'Filename', outputFilenameHint: 'The .ttf extension is added automatically.', downloadTtf: 'Save TTF', fontFamily: 'Font name', glyphCount: 'Glyphs', format: 'Format', processing: 'Processing', fullyLocal: 'Fully local',
+          buildInfo: 'Build information', appVersion: 'App version', builtAt: 'Built at', dependencies: 'Embedded dependencies', footer: 'Generates the font in your browser',
+          helpBasicsTitle: 'Basic steps', helpStep1: 'Choose a character set or type text under “Add only the characters you need.”', helpStep2: 'On the writing screen, draw with a mouse, finger, or pen while using the faint guide character if helpful. The guide can be turned on or off, and Undo, Redo, and Clear are available.', helpStep3: 'Open “Review & save,” check the actual generated font, then save the TTF.', helpPrivacyTitle: 'Privacy', helpPrivacyBody: 'Handwriting coordinates and font generation stay inside your browser. This app does not send your characters or generated font to an external server.', helpQualityTitle: 'How v1.0.0 converts strokes', helpQualityBody: 'Instead of rasterizing your writing and tracing an image, the app writes TrueType outlines directly from pen coordinates. v1.0.0 shows the generated TTF at 12 / 16 / 24 / 48px and mainly flags actual merging or disappearing details at 16 / 24px compared with 48px. The 12px row is informational. Warnings never modify the glyph automatically.', helpNotesTitle: 'Notes', helpNoteV01: 'v1.0.0 supports TrueType (TTF) export, size-by-size glyph checks, and project save/load. WOFF2, detailed spacing controls, and alternate glyphs are not included.', helpNoteStorage: 'Work is autosaved on this device. v1.0.0 can also explicitly save and load project JSON for backup or moving work between devices.', helpNoteUnicode: 'v1.0.0 supports BMP characters. Some characters such as emoji are outside this range.', helpOffline: 'The release HTML contains the runtime code and does not make external network requests.',
+          unsupported: count => `${count} character(s) are outside the v1.0.0 BMP range, such as some emoji.`, limitReached: `v1.0.0 supports up to ${MAX_CHARS} drawable characters. The first ${MAX_CHARS} are used.`, noCharacters: 'Choose at least one character.', clearedGlyph: 'Cleared this character.', undoAction: 'Undo', restored: 'Restored.', projectReset: 'Started a new project.', newProjectTitle: 'Start a new project?', newProjectMessage: 'This removes the current handwriting and settings from local autosave.', cancel: 'Cancel', reset: 'Reset', downloaded: 'Saved the TTF.', autosaveFailed: 'Local autosave is unavailable. Save the TTF early if the work matters.', restoredProject: 'Restored your previous work.', restoreFailed: 'Saved work could not be loaded, so a clean project was opened.', pointLimit: 'This project reached the point limit. Reduce the character set before continuing.'
+        }
+      };
+
+      const state = {
+        language: detectLanguage(),
+        step: 'setup',
+        fontName: 'My Handwriting',
+        customText: '',
+        selectedSets: { hiragana: true, katakana: false, upper: false, lower: false, digits: false, symbols: false },
+        chars: [...characterSets.hiragana],
+        currentIndex: 0,
+        penWidth: 56,
+        guideCharacter: true,
+        glyphs: Object.create(null),
+        quality: Object.create(null),
+        previewBytes: null,
+        fontGeneration: 0,
+        totalPoints: 0,
+        saveWarned: false
+      };
+      let previewFace = null;
+      let generationTimer = 0;
+      let activePointer = null;
+      let activeStroke = null;
+      let autosaveTimer = 0;
+
+      function detectLanguage() {
+        if (APP_CONFIG.defaultLanguage === 'ja' || APP_CONFIG.defaultLanguage === 'en') return APP_CONFIG.defaultLanguage;
+        try {
+          const saved = localStorage.getItem(`${STORAGE_KEY}:language`);
+          if (saved === 'ja' || saved === 'en') return saved;
+        } catch { /* ignore */ }
+        return (navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en';
+      }
+      function t(key, ...args) {
+        const value = translations[state.language]?.[key] ?? translations.en[key] ?? key;
+        return typeof value === 'function' ? value(...args) : value;
+      }
+      function formatNumber(value) { return new Intl.NumberFormat(state.language === 'ja' ? 'ja-JP' : 'en-US').format(value); }
+      function codeLabel(char) { return `U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`; }
+      function getGlyph(char, create = true) {
+        if (!state.glyphs[char] && create) state.glyphs[char] = { strokes: [], redo: [] };
+        return state.glyphs[char] || { strokes: [], redo: [] };
+      }
+      function currentChar() { return state.chars[state.currentIndex] || ''; }
+      function completedCount() { return state.chars.reduce((count, char) => count + (getGlyph(char, false).strokes?.length ? 1 : 0), 0); }
+      function supportedCustomCharacters(text) {
+        const chars = [];
+        const unsupported = [];
+        const seen = new Set();
+        for (const char of [...text]) {
+          if (/\s/u.test(char)) continue;
+          const cp = char.codePointAt(0);
+          if (cp > 0xffff || cp === 0xffff) { unsupported.push(char); continue; }
+          if (!seen.has(char)) { seen.add(char); chars.push(char); }
+        }
+        return { chars, unsupported };
+      }
+      function computeSelectedChars() {
+        const ordered = [];
+        const seen = new Set();
+        const add = char => { if (!seen.has(char) && char.codePointAt(0) <= 0xfffe && !/\s/u.test(char)) { seen.add(char); ordered.push(char); } };
+        for (const key of Object.keys(state.selectedSets)) if (state.selectedSets[key]) characterSets[key].forEach(add);
+        const custom = supportedCustomCharacters(state.customText);
+        custom.chars.forEach(add);
+        return { chars: ordered.slice(0, MAX_CHARS), unsupported: custom.unsupported, truncated: ordered.length > MAX_CHARS, originalCount: ordered.length };
+      }
+      function syncSetupInputs() {
+        $('#fontNameInput').value = state.fontName;
+        $('#customTextInput').value = state.customText;
+        $('#setHiragana').checked = state.selectedSets.hiragana;
+        $('#setKatakana').checked = state.selectedSets.katakana;
+        $('#setUpper').checked = state.selectedSets.upper;
+        $('#setLower').checked = state.selectedSets.lower;
+        $('#setDigits').checked = state.selectedSets.digits;
+        $('#setSymbols').checked = state.selectedSets.symbols;
+        $('#penWidthInput').value = String(state.penWidth);
+        $('#penWidthValue').textContent = String(state.penWidth);
+      }
+      function updateSelectionSummary() {
+        state.fontName = $('#fontNameInput').value.trim() || 'My Handwriting';
+        state.customText = $('#customTextInput').value;
+        state.selectedSets = {
+          hiragana: $('#setHiragana').checked, katakana: $('#setKatakana').checked, upper: $('#setUpper').checked,
+          lower: $('#setLower').checked, digits: $('#setDigits').checked, symbols: $('#setSymbols').checked
+        };
+        const selected = computeSelectedChars();
+        $('#selectedCount').textContent = formatNumber(selected.chars.length);
+        const warning = $('#unsupportedWarning');
+        const messages = [];
+        if (selected.unsupported.length) messages.push(t('unsupported', selected.unsupported.length));
+        if (selected.truncated) messages.push(t('limitReached'));
+        warning.hidden = messages.length === 0;
+        $('#unsupportedWarningText').textContent = messages.join(' ');
+        scheduleAutosave();
+        return selected;
+      }
+
+      // Canonical Promise-based confirmation component adapted from components/confirm-dialog.html.
+      const AppConfirm = (() => {
+        const dialog = $('#appConfirmDialog');
+        const title = $('#appConfirmTitle');
+        const message = $('#appConfirmMessage');
+        const closeButton = $('#appConfirmClose');
+        const cancelButton = $('#appConfirmCancel');
+        const okButton = $('#appConfirmOk');
+        let resolver = null;
+        let restoreFocus = null;
+        function finish(result) {
+          if (!dialog.open) return;
+          const currentResolver = resolver;
+          resolver = null;
+          dialog.close();
+          if (restoreFocus instanceof HTMLElement && restoreFocus.isConnected) restoreFocus.focus({ preventScroll: true });
+          restoreFocus = null;
+          if (currentResolver) currentResolver(result);
+        }
+        function ask({ title: heading, message: body, confirmLabel, cancelLabel, tone = 'default' } = {}) {
+          if (dialog.open) finish(false);
+          title.textContent = heading || '';
+          message.textContent = body || '';
+          cancelButton.textContent = cancelLabel || t('cancel');
+          okButton.textContent = confirmLabel || t('reset');
+          okButton.classList.toggle('danger', tone === 'danger');
+          okButton.classList.toggle('primary', tone !== 'danger');
+          restoreFocus = document.activeElement;
+          return new Promise(resolve => { resolver = resolve; dialog.showModal(); requestAnimationFrame(() => cancelButton.focus({ preventScroll: true })); });
+        }
+        closeButton.addEventListener('click', () => finish(false));
+        cancelButton.addEventListener('click', () => finish(false));
+        okButton.addEventListener('click', () => finish(true));
+        dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
+        dialog.addEventListener('click', event => { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) finish(false); });
+        return Object.freeze({ ask });
+      })();
+      window.AppConfirm = AppConfirm;
+
+      // Canonical toast / Undo component adapted from components/toast.html.
+      const AppToast = (() => {
+        const root = $('#appToast');
+        const message = $('#appToastMessage');
+        const action = $('#appToastAction');
+        let timer = 0;
+        let actionHandler = null;
+        function dismiss() { clearTimeout(timer); timer = 0; root.classList.remove('show'); actionHandler = null; }
+        function show({ message: text = '', actionLabel = '', onAction = null, duration = 3200 } = {}) {
+          clearTimeout(timer); message.textContent = String(text); actionHandler = typeof onAction === 'function' ? onAction : null; action.textContent = actionLabel || ''; action.hidden = !actionHandler || !actionLabel; root.classList.add('show'); if (duration > 0) timer = setTimeout(dismiss, duration); return Object.freeze({ dismiss });
+        }
+        action.addEventListener('click', () => { const handler = actionHandler; dismiss(); if (handler) handler(); });
+        return Object.freeze({ show, dismiss });
+      })();
+      window.AppToast = AppToast;
+
+      function applyLanguage() {
+        document.documentElement.lang = state.language;
+        $$('[data-i18n]').forEach(element => { element.textContent = t(element.dataset.i18n); });
+        $$('[data-i18n-placeholder]').forEach(element => { element.placeholder = t(element.dataset.i18nPlaceholder); });
+        $$('[data-i18n-title]').forEach(element => { element.title = t(element.dataset.i18nTitle); });
+        $$('[data-i18n-aria-label]').forEach(element => { element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel)); });
+        $('#languageButton').textContent = state.language === 'ja' ? 'EN' : '日本語';
+        $('#languageButton').setAttribute('aria-label', state.language === 'ja' ? '英語に切り替え' : 'Switch to Japanese');
+        document.title = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
+        $('#brandName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
+        $('#footerName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
+        updateSelectionSummary();
+        updateWritingUi();
+        updateExportUi();
+      }
+
+      function setStep(step) {
+        if (step === 'write' && !state.chars.length) return;
+        if (step === 'export' && !state.previewBytes) return;
+        state.step = step;
+        $$('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
+        $$('.step-tab').forEach(button => button.setAttribute('aria-current', button.dataset.step === step ? 'step' : 'false'));
+        $$('.mobile-tab').forEach(button => button.classList.toggle('active', button.dataset.step === step));
+        if (step === 'write') { requestAnimationFrame(() => { resizeCanvas(); renderCanvas(); }); }
+        if (step === 'export') updateExportUi();
+        scheduleAutosave();
+      }
+
+      function startWriting() {
+        const selected = updateSelectionSummary();
+        if (!selected.chars.length) { AppToast.show({ message: t('noCharacters') }); return; }
+        const previousChar = currentChar();
+        state.chars = selected.chars;
+        const existingIndex = previousChar ? state.chars.indexOf(previousChar) : -1;
+        state.currentIndex = existingIndex >= 0 ? existingIndex : Math.min(state.currentIndex, state.chars.length - 1);
+        if (state.currentIndex < 0) state.currentIndex = 0;
+        $('#stepTabWrite').disabled = false;
+        $('#mobileTabWrite').disabled = false;
+        rebuildGlyphLists();
+        updateWritingUi();
+        setStep('write');
+        scheduleFontGeneration(0);
+      }
+
+      function rebuildGlyphLists() {
+        const lists = [$('#glyphList'), $('#glyphPickerGrid')];
+        for (const list of lists) {
+          list.replaceChildren();
+          state.chars.forEach((char, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'glyph-button';
+            button.textContent = char;
+            button.dataset.index = String(index);
+            button.title = `${char} · ${codeLabel(char)}`;
+            button.addEventListener('click', () => { selectCharacter(index); if ($('#glyphPickerDialog').open) $('#glyphPickerDialog').close(); });
+            list.append(button);
+          });
+        }
+        refreshGlyphListState();
+      }
+      function refreshGlyphListState() {
+        $$('.glyph-button[data-index]').forEach(button => {
+          const index = Number(button.dataset.index);
+          const char = state.chars[index];
+          const done = Boolean(getGlyph(char, false).strokes?.length);
+          const warning = Boolean(state.quality[char]?.warning);
+          button.classList.toggle('current', index === state.currentIndex);
+          button.classList.toggle('done', done);
+          button.classList.toggle('warning', done && warning);
+          button.title = `${char} · ${codeLabel(char)}${done && warning ? ` · ${t('needsReview')}` : ''}`;
+          button.setAttribute('aria-current', index === state.currentIndex ? 'true' : 'false');
+        });
+      }
+      function selectCharacter(index) {
+        if (!Number.isInteger(index) || index < 0 || index >= state.chars.length) return;
+        state.currentIndex = index;
+        updateWritingUi();
+        renderCanvas();
+        refreshGlyphListState();
+        scheduleAutosave();
+      }
+      function findNextGlyphIndex(predicate, fromIndex = state.currentIndex) {
+        const total = state.chars.length;
+        if (!total) return -1;
+        for (let offset = 1; offset <= total; offset += 1) {
+          const index = (fromIndex + offset) % total;
+          if (index === fromIndex) continue;
+          const char = state.chars[index];
+          if (predicate(char, index)) return index;
+        }
+        return -1;
+      }
+      function nextIncompleteIndex() {
+        return findNextGlyphIndex(char => !(getGlyph(char, false).strokes?.length));
+      }
+      function nextWarningIndex() {
+        return findNextGlyphIndex(char => Boolean(state.quality[char]?.warning));
+      }
+      function goToNextIncomplete() {
+        const index = nextIncompleteIndex();
+        if (index >= 0) selectCharacter(index);
+      }
+      function goToNextWarning() {
+        const index = nextWarningIndex();
+        if (index >= 0) selectCharacter(index);
+      }
+
+      function updateWritingUi() {
+        const char = currentChar();
+        const total = state.chars.length;
+        const done = completedCount();
+        $('#currentChar').textContent = char || '—';
+        $('#currentCode').textContent = char ? codeLabel(char) : '—';
+        $('#previewGlyph').textContent = char || '—';
+        const completedBeforeCurrent = state.chars
+          .slice(0, Math.max(0, state.currentIndex))
+          .filter(c => getGlyph(c, false).strokes?.length);
+        const currentWritten = Boolean(char && getGlyph(char, false).strokes?.length);
+        const previewChars = completedBeforeCurrent.slice(-4);
+        if (currentWritten && char) previewChars.push(char);
+        else if (!previewChars.length && char) previewChars.push(char);
+        const previewSample = previewChars.join('') || '—';
+        $('#preview12').textContent = previewSample;
+        $('#preview16').textContent = previewSample;
+        $('#preview24').textContent = previewSample;
+        $('#preview48').textContent = char || previewSample;
+        const progress = total ? Math.round(done / total * 100) : 0;
+        $('#progressText').textContent = `${done} / ${total}`;
+        $('#progressPercent').textContent = `${progress}%`;
+        $('#writeProgressBar').style.width = `${progress}%`;
+        $('#writeProgressTrack').setAttribute('aria-valuenow', String(progress));
+        $('#sidebarProgress').textContent = `${done} / ${total}`;
+        $('#previousCharButton').disabled = state.currentIndex <= 0;
+        const incompleteIndex = nextIncompleteIndex();
+        const warningIndex = nextWarningIndex();
+        $('#nextIncompleteButton').hidden = incompleteIndex < 0 || incompleteIndex === state.currentIndex + 1;
+        $('#nextWarningButton').hidden = warningIndex < 0;
+        const atLast = state.currentIndex >= total - 1;
+        const nextButton = $('#nextCharButton');
+        if (!atLast) {
+          nextButton.dataset.action = 'next';
+          $('#nextCharLabel').textContent = t('next');
+          nextButton.disabled = false;
+        } else if (incompleteIndex >= 0) {
+          nextButton.dataset.action = 'incomplete';
+          $('#nextCharLabel').textContent = t('nextIncomplete');
+          nextButton.disabled = false;
+        } else {
+          nextButton.dataset.action = 'export';
+          $('#nextCharLabel').textContent = t('reviewAndSave');
+          nextButton.disabled = done === 0;
+        }
+        const glyph = getGlyph(char, false);
+        $('#undoButton').disabled = !(glyph.strokes?.length);
+        $('#redoButton').disabled = !(glyph.redo?.length);
+        $('#clearGlyphButton').disabled = !(glyph.strokes?.length);
+        $('#canvasHint').classList.toggle('hidden', Boolean(glyph.strokes?.length));
+        updateCurrentQualityUi();
+        refreshGlyphListState();
+      }
+
+      function resizeCanvas() {
+        const canvas = $('#drawCanvas');
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+        const width = Math.max(1, Math.round(rect.width * dpr));
+        const height = Math.max(1, Math.round(rect.height * dpr));
+        if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+      }
+      function drawGuideCharacter(ctx, char) {
+        const family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic", "Hiragino Sans", sans-serif';
+        const probeSize = 800;
+        const targetVisualSize = 800;
+        ctx.save();
+        ctx.fillStyle = 'rgba(22,98,79,.07)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.font = `400 ${probeSize}px ${family}`;
+        let metrics = ctx.measureText(char);
+        const visualWidth = Math.max(1, (metrics.actualBoundingBoxLeft || 0) + (metrics.actualBoundingBoxRight || metrics.width || probeSize));
+        const visualHeight = Math.max(1, (metrics.actualBoundingBoxAscent || probeSize * .78) + (metrics.actualBoundingBoxDescent || probeSize * .18));
+        const fittedSize = Math.max(260, Math.min(900, probeSize * Math.min(targetVisualSize / visualWidth, targetVisualSize / visualHeight)));
+        ctx.font = `400 ${fittedSize}px ${family}`;
+        metrics = ctx.measureText(char);
+        const left = metrics.actualBoundingBoxLeft || 0;
+        const right = metrics.actualBoundingBoxRight || metrics.width || fittedSize;
+        const ascent = metrics.actualBoundingBoxAscent || fittedSize * .78;
+        const descent = metrics.actualBoundingBoxDescent || fittedSize * .18;
+        const bboxLeft = -left;
+        const bboxRight = right;
+        const bboxTop = -ascent;
+        const bboxBottom = descent;
+        const originX = 500 - (bboxLeft + bboxRight) / 2;
+        const baselineY = 500 - (bboxTop + bboxBottom) / 2;
+        ctx.fillText(char, originX, baselineY);
+        ctx.restore();
+      }
+      function renderCanvas() {
+        const canvas = $('#drawCanvas');
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        resizeCanvas();
+        const ctx = canvas.getContext('2d');
+        const sx = canvas.width / LOGICAL_SIZE;
+        const sy = canvas.height / LOGICAL_SIZE;
+        ctx.setTransform(sx, 0, 0, sy, 0, 0);
+        ctx.clearRect(0, 0, LOGICAL_SIZE, LOGICAL_SIZE);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, LOGICAL_SIZE, LOGICAL_SIZE);
+        ctx.save();
+        ctx.strokeStyle = '#d9ddd9';
+        ctx.lineWidth = 1.2 / Math.max(sx, sy);
+        ctx.setLineDash([10, 12]);
+        ctx.beginPath(); ctx.moveTo(500, 60); ctx.lineTo(500, 940); ctx.moveTo(60, 500); ctx.lineTo(940, 500); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = '#eceeeb';
+        ctx.beginPath(); ctx.rect(70, 70, 860, 860); ctx.stroke();
+        ctx.restore();
+        const char = currentChar();
+        if (state.guideCharacter && char) {
+          drawGuideCharacter(ctx, char);
+        }
+        const glyph = getGlyph(char, false);
+        for (const stroke of glyph.strokes || []) drawStroke(ctx, stroke);
+        if (activeStroke) drawStroke(ctx, activeStroke);
+      }
+      function strokeWidthForPoint(point) {
+        const pressure = Number.isFinite(point.p) && point.p > 0 ? Math.max(.15, Math.min(1, point.p)) : .5;
+        const pressureScale = point.pen ? .7 + pressure * .6 : 1;
+        return state.penWidth * pressureScale;
+      }
+      function drawStroke(ctx, stroke) {
+        if (!stroke?.points?.length) return;
+        const pts = stroke.points;
+        ctx.save();
+        ctx.strokeStyle = '#20211f';
+        ctx.fillStyle = '#20211f';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        if (pts.length === 1) {
+          const r = strokeWidthForPoint(pts[0]) / 2;
+          ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, r, 0, Math.PI * 2); ctx.fill();
+        } else {
+          for (let i = 1; i < pts.length; i += 1) {
+            const a = pts[i - 1]; const b = pts[i];
+            ctx.lineWidth = (strokeWidthForPoint(a) + strokeWidthForPoint(b)) / 2;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+      function pointFromPointer(event) {
+        const rect = $('#drawCanvas').getBoundingClientRect();
+        const x = Math.max(0, Math.min(LOGICAL_SIZE, (event.clientX - rect.left) / rect.width * LOGICAL_SIZE));
+        const y = Math.max(0, Math.min(LOGICAL_SIZE, (event.clientY - rect.top) / rect.height * LOGICAL_SIZE));
+        const pressure = Number.isFinite(event.pressure) && event.pressure > 0 ? event.pressure : .5;
+        return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, p: Math.round(pressure * 1000) / 1000, t: Math.round(performance.now()), pen: event.pointerType === 'pen' };
+      }
+      function maybeAppendPoint(point) {
+        if (!activeStroke) return;
+        const last = activeStroke.points[activeStroke.points.length - 1];
+        if (last) {
+          const dx = point.x - last.x; const dy = point.y - last.y;
+          if (dx * dx + dy * dy < 2.25) return;
+        }
+        if (state.totalPoints + activeStroke.points.length >= MAX_POINTS) {
+          AppToast.show({ message: t('pointLimit'), duration: 5200 });
+          return;
+        }
+        activeStroke.points.push(point);
+      }
+      function handlePointerDown(event) {
+        if (activePointer !== null || !currentChar()) return;
+        activePointer = event.pointerId;
+        $('#drawCanvas').setPointerCapture(event.pointerId);
+        activeStroke = { points: [] };
+        maybeAppendPoint(pointFromPointer(event));
+        renderCanvas();
+      }
+      function handlePointerMove(event) {
+        if (event.pointerId !== activePointer || !activeStroke) return;
+        const events = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [event];
+        for (const item of events) maybeAppendPoint(pointFromPointer(item));
+        renderCanvas();
+      }
+      function finishPointer(event) {
+        if (event.pointerId !== activePointer || !activeStroke) return;
+        maybeAppendPoint(pointFromPointer(event));
+        const stroke = activeStroke;
+        activePointer = null;
+        activeStroke = null;
+        try { $('#drawCanvas').releasePointerCapture(event.pointerId); } catch { /* ignore */ }
+        if (stroke.points.length) {
+          const glyph = getGlyph(currentChar());
+          glyph.strokes.push(stroke);
+          glyph.redo = [];
+          state.totalPoints += stroke.points.length;
+          delete state.quality[currentChar()];
+          updateWritingUi();
+          refreshGlyphListState();
+          scheduleAutosave();
+          scheduleFontGeneration();
+        }
+        renderCanvas();
+      }
+
+      function undoCurrent() {
+        const glyph = getGlyph(currentChar());
+        if (!glyph.strokes.length) return;
+        const stroke = glyph.strokes.pop();
+        glyph.redo.push(stroke);
+        state.totalPoints -= stroke.points.length;
+        afterGlyphEdit();
+      }
+      function redoCurrent() {
+        const glyph = getGlyph(currentChar());
+        if (!glyph.redo.length) return;
+        const stroke = glyph.redo.pop();
+        glyph.strokes.push(stroke);
+        state.totalPoints += stroke.points.length;
+        afterGlyphEdit();
+      }
+      function clearCurrent() {
+        const char = currentChar();
+        const glyph = getGlyph(char);
+        if (!glyph.strokes.length) return;
+        const before = glyph.strokes.map(stroke => ({ points: stroke.points.map(point => ({ ...point })) }));
+        const removedPoints = before.reduce((sum, stroke) => sum + stroke.points.length, 0);
+        glyph.strokes = [];
+        glyph.redo = [];
+        state.totalPoints -= removedPoints;
+        afterGlyphEdit();
+        AppToast.show({ message: t('clearedGlyph'), actionLabel: t('undoAction'), duration: 5000, onAction: () => {
+          const target = getGlyph(char); target.strokes = before; target.redo = []; state.totalPoints += removedPoints; afterGlyphEdit(); AppToast.show({ message: t('restored') });
+        } });
+      }
+      function afterGlyphEdit() { delete state.quality[currentChar()]; updateWritingUi(); refreshGlyphListState(); renderCanvas(); scheduleAutosave(); scheduleFontGeneration(); }
+
+      function serializeProjectPayload() {
+        const serializableGlyphs = {};
+        for (const [char, glyph] of Object.entries(state.glyphs)) if (glyph.strokes?.length) serializableGlyphs[char] = { strokes: glyph.strokes };
+        return {
+          format: 'browser-kitty-handwriting-font-project', schemaVersion: 1, version: APP_CONFIG.version, savedAt: new Date().toISOString(),
+          fontName: state.fontName, customText: state.customText, selectedSets: state.selectedSets, chars: state.chars, currentIndex: state.currentIndex,
+          penWidth: state.penWidth, guideCharacter: state.guideCharacter, glyphs: serializableGlyphs, step: state.step
+        };
+      }
+      function scheduleAutosave() {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(saveProject, 180);
+      }
+      function saveProject() {
+        const payload = serializeProjectPayload();
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          localStorage.setItem(`${STORAGE_KEY}:language`, state.language);
+        } catch {
+          if (!state.saveWarned) { state.saveWarned = true; AppToast.show({ message: t('autosaveFailed'), duration: 5200 }); }
+        }
+      }
+      function restoreProject() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return false;
+          const imported = normalizeImportedProject(JSON.parse(raw));
+          state.fontName = imported.fontName;
+          state.customText = imported.customText;
+          state.selectedSets = imported.selectedSets;
+          state.chars = imported.chars;
+          state.currentIndex = imported.currentIndex;
+          state.penWidth = imported.penWidth;
+          state.guideCharacter = imported.guideCharacter;
+          state.glyphs = imported.glyphs;
+          state.totalPoints = imported.totalPoints;
+          state.quality = Object.create(null);
+          state.previewBytes = null;
+          state.step = imported.step;
+          return true;
+        } catch {
+          try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+          setTimeout(() => AppToast.show({ message: t('restoreFailed'), duration: 4800 }), 0);
+          return false;
+        }
+      }
+
+      // ----- Small-size glyph quality checks ----------------------------------------------------
+      // v1.0.0 prioritizes actual rendered topology changes over theoretical spacing.
+      // 48px is the reference. 16/24px can trigger a review when a counter closes or separate
+      // components merge. 12px is intentionally advisory-only because tiny text commonly loses
+      // detail even when the font is otherwise healthy. Geometric spacing is used conservatively.
+      const QUALITY_SIZES = [12, 16, 24, 48];
+      const QUALITY_REFERENCE_SIZE = 48;
+      const MIN_MEANINGFUL_GAP_LOGICAL = 8;
+      const FONT_UNITS_PER_LOGICAL_GAP = 1.9;
+      const GAP_REVIEW_THRESHOLD_16 = .45;
+      const GAP_ADVISORY_THRESHOLD_12 = .60;
+      function pointToSegmentDistance(p, a, b) {
+        const dx = b.x - a.x; const dy = b.y - a.y;
+        const denom = dx * dx + dy * dy;
+        if (!denom) return Math.hypot(p.x - a.x, p.y - a.y);
+        const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / denom));
+        return Math.hypot(p.x - (a.x + u * dx), p.y - (a.y + u * dy));
+      }
+      function onSegment(a, b, p) {
+        return Math.abs(orientation(a, b, p)) < .001 && p.x >= Math.min(a.x, b.x) - .001 && p.x <= Math.max(a.x, b.x) + .001 && p.y >= Math.min(a.y, b.y) - .001 && p.y <= Math.max(a.y, b.y) + .001;
+      }
+      function segmentsIntersectInclusive(a, b, c, d) {
+        const o1 = orientation(a, b, c); const o2 = orientation(a, b, d); const o3 = orientation(c, d, a); const o4 = orientation(c, d, b);
+        if (((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))) return true;
+        return onSegment(a, b, c) || onSegment(a, b, d) || onSegment(c, d, a) || onSegment(c, d, b);
+      }
+      function segmentDistance(a, b, c, d) {
+        if (segmentsIntersectInclusive(a, b, c, d)) return 0;
+        return Math.min(pointToSegmentDistance(a, c, d), pointToSegmentDistance(b, c, d), pointToSegmentDistance(c, a, b), pointToSegmentDistance(d, a, b));
+      }
+      function logicalRadius(point) { return strokeWidthForPoint(point) / 2; }
+      function analyzeGeometricGap(glyph) {
+        if (!glyph?.strokes?.length) return { risk: false, minGap: Infinity };
+        const segments = [];
+        glyph.strokes.forEach((stroke, strokeIndex) => {
+          const points = simplifyStroke(stroke.points || []);
+          for (let i = 1; i < points.length; i += 1) {
+            const a = points[i - 1]; const b = points[i];
+            segments.push({ a, b, radius: (logicalRadius(a) + logicalRadius(b)) / 2, strokeIndex, segmentIndex: i - 1 });
+          }
+        });
+        const connectedStrokePairs = new Set();
+        const pairKey = (a, b) => a < b ? `${a}:${b}` : `${b}:${a}`;
+        for (let i = 0; i < segments.length; i += 1) {
+          const first = segments[i];
+          for (let j = i + 1; j < segments.length; j += 1) {
+            const second = segments[j];
+            if (first.strokeIndex === second.strokeIndex) continue;
+            const centerDistance = segmentDistance(first.a, first.b, second.a, second.b);
+            const edgeGap = centerDistance - first.radius - second.radius;
+            if (edgeGap <= 0) connectedStrokePairs.add(pairKey(first.strokeIndex, second.strokeIndex));
+          }
+        }
+        let minGap = Infinity;
+        for (let i = 0; i < segments.length; i += 1) {
+          const first = segments[i];
+          for (let j = i + 1; j < segments.length; j += 1) {
+            const second = segments[j];
+            if (first.strokeIndex === second.strokeIndex) continue;
+            if (connectedStrokePairs.has(pairKey(first.strokeIndex, second.strokeIndex))) continue;
+            const centerDistance = segmentDistance(first.a, first.b, second.a, second.b);
+            const edgeGap = centerDistance - first.radius - second.radius;
+            if (edgeGap > MIN_MEANINGFUL_GAP_LOGICAL && edgeGap < minGap) minGap = edgeGap;
+          }
+        }
+        return { risk: false, minGap };
+      }
+      function analyzeRenderedTopology(char, pxSize) {
+        const canvas = document.createElement('canvas');
+        const probe = canvas.getContext('2d', { willReadFrequently: true });
+        probe.font = `400 ${pxSize}px "${PREVIEW_FAMILY}"`;
+        probe.textBaseline = 'alphabetic';
+        const metrics = probe.measureText(char);
+        const left = metrics.actualBoundingBoxLeft || 0;
+        const right = metrics.actualBoundingBoxRight || metrics.width || pxSize;
+        const ascent = metrics.actualBoundingBoxAscent || pxSize * .82;
+        const descent = metrics.actualBoundingBoxDescent || pxSize * .18;
+        const pad = Math.max(4, Math.ceil(pxSize * .3));
+        canvas.width = Math.max(16, Math.ceil(left + right + pad * 2));
+        canvas.height = Math.max(16, Math.ceil(ascent + descent + pad * 2));
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        ctx.font = `400 ${pxSize}px "${PREVIEW_FAMILY}"`;
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(char, pad + left, pad + ascent);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const width = canvas.width; const height = canvas.height; const total = width * height;
+        const ink = new Uint8Array(total);
+        for (let i = 0; i < total; i += 1) ink[i] = data[i * 4 + 3] >= 96 ? 1 : 0;
+
+        // Count rendered ink components with 8-neighbour connectivity. A reduction compared with
+        // 48px means two visibly separate parts have actually merged at the smaller size.
+        const inkSeen = new Uint8Array(total); const queue = new Int32Array(total);
+        let components = 0; let head = 0; let tail = 0;
+        for (let start = 0; start < total; start += 1) {
+          if (!ink[start] || inkSeen[start]) continue;
+          components += 1; inkSeen[start] = 1; head = 0; tail = 0; queue[tail++] = start;
+          while (head < tail) {
+            const index = queue[head++]; const x = index % width; const y = Math.floor(index / width);
+            for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
+              if (!dx && !dy) continue;
+              const nx = x + dx; const ny = y + dy;
+              if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+              const next = ny * width + nx;
+              if (!ink[next] || inkSeen[next]) continue;
+              inkSeen[next] = 1; queue[tail++] = next;
+            }
+          }
+        }
+
+        // Count enclosed background regions (counters/holes) with 4-neighbour connectivity.
+        const outside = new Uint8Array(total); head = 0; tail = 0;
+        const enqueue = index => { if (index < 0 || index >= total || ink[index] || outside[index]) return; outside[index] = 1; queue[tail++] = index; };
+        for (let x = 0; x < width; x += 1) { enqueue(x); enqueue((height - 1) * width + x); }
+        for (let y = 0; y < height; y += 1) { enqueue(y * width); enqueue(y * width + width - 1); }
+        while (head < tail) {
+          const index = queue[head++]; const x = index % width; const y = Math.floor(index / width);
+          if (x > 0) enqueue(index - 1); if (x + 1 < width) enqueue(index + 1); if (y > 0) enqueue(index - width); if (y + 1 < height) enqueue(index + width);
+        }
+        const seen = new Uint8Array(total); let holes = 0;
+        for (let start = 0; start < total; start += 1) {
+          if (ink[start] || outside[start] || seen[start]) continue;
+          holes += 1; seen[start] = 1; head = 0; tail = 0; queue[tail++] = start;
+          while (head < tail) {
+            const index = queue[head++]; const x = index % width; const y = Math.floor(index / width);
+            for (const next of [x > 0 ? index - 1 : -1, x + 1 < width ? index + 1 : -1, y > 0 ? index - width : -1, y + 1 < height ? index + width : -1]) {
+              if (next < 0 || ink[next] || outside[next] || seen[next]) continue;
+              seen[next] = 1; queue[tail++] = next;
+            }
+          }
+        }
+        return { holes, components };
+      }
+      function estimateRenderedGapPx(minGap, pxSize) {
+        if (!Number.isFinite(minGap)) return Infinity;
+        return minGap * FONT_UNITS_PER_LOGICAL_GAP * pxSize / UPM;
+      }
+      function analyzeGlyphQuality(char, glyph) {
+        const geometry = analyzeGeometricGap(glyph);
+        const topologyBySize = Object.create(null);
+        for (const size of QUALITY_SIZES) {
+          try { topologyBySize[size] = analyzeRenderedTopology(char, size); }
+          catch { topologyBySize[size] = null; }
+        }
+        const reference = topologyBySize[QUALITY_REFERENCE_SIZE];
+        const sizes = QUALITY_SIZES.map(size => {
+          const gapPx = estimateRenderedGapPx(geometry.minGap, size);
+          const topology = topologyBySize[size];
+          const holeRisk = size < QUALITY_REFERENCE_SIZE && reference && topology && reference.holes > topology.holes;
+          const mergeRisk = size < QUALITY_REFERENCE_SIZE && reference && topology && reference.components > topology.components;
+          const topologyRisk = Boolean(holeRisk || mergeRisk);
+          const gapRisk = size === 16 && Number.isFinite(gapPx) && gapPx < GAP_REVIEW_THRESHOLD_16;
+          const advisory = size === 12 && (topologyRisk || (Number.isFinite(gapPx) && gapPx < GAP_ADVISORY_THRESHOLD_12));
+          const warning = size !== 12 && (topologyRisk || gapRisk);
+          return {
+            size, warning, advisory, gapRisk, topologyRisk, holeRisk, mergeRisk, gapPx,
+            holeCount: topology?.holes ?? null, componentCount: topology?.components ?? null
+          };
+        });
+        const warningSizes = sizes.filter(item => item.warning).map(item => item.size);
+        const advisorySizes = sizes.filter(item => item.advisory && !item.warning).map(item => item.size);
+        return {
+          warning: warningSizes.length > 0,
+          advisory: warningSizes.length === 0 && advisorySizes.length > 0,
+          gapRisk: sizes.some(item => item.gapRisk),
+          topologyRisk: sizes.some(item => item.topologyRisk),
+          holeRisk: sizes.some(item => item.holeRisk),
+          mergeRisk: sizes.some(item => item.mergeRisk),
+          minGap: geometry.minGap,
+          referenceTopology: reference,
+          sizes,
+          warningSizes,
+          advisorySizes
+        };
+      }
+      function analyzeAllGlyphQuality(entries) {
+        const next = Object.create(null);
+        for (const entry of entries) next[entry.char] = state.quality[entry.char] || analyzeGlyphQuality(entry.char, entry.glyph);
+        state.quality = next;
+        updateCurrentQualityUi();
+        refreshGlyphListState();
+        updateExportUi();
+      }
+      function qualityDetail(result) {
+        if (!result) return '';
+        if (!result.warning && result.advisory) return t('qualityDetailAdvisory');
+        if (!result.warning) return t('qualityDetailOk');
+        const sizes = result.warningSizes.map(size => `${size}px`).join(' / ');
+        const prefix = t('qualitySizesWarning', sizes);
+        const reason = result.topologyRisk && result.gapRisk ? t('qualityDetailBoth') : result.topologyRisk ? t('qualityDetailTopology') : t('qualityDetailGap');
+        return `${prefix} ${reason}`;
+      }
+      function updatePreviewSizeStatuses(result, hasGlyph) {
+        for (const size of QUALITY_SIZES) {
+          const badge = $(`#previewStatus${size}`);
+          if (!badge) continue;
+          badge.classList.remove('ok', 'advisory', 'warning');
+          if (!hasGlyph) { badge.textContent = '—'; badge.removeAttribute('aria-label'); continue; }
+          const item = result?.sizes?.find(entry => entry.size === size);
+          if (!item) { badge.textContent = t('sizeChecking'); badge.setAttribute('aria-label', `${size}px ${t('sizeChecking')}`); continue; }
+          const tone = item.warning ? 'warning' : item.advisory ? 'advisory' : 'ok';
+          const label = item.warning ? t('sizeWarning') : item.advisory ? t('sizeAdvisory') : t('sizeOk');
+          badge.classList.add(tone);
+          badge.textContent = label;
+          badge.setAttribute('aria-label', `${size}px ${label}`);
+        }
+      }
+      function updateCurrentQualityUi() {
+        const root = $('#qualityResult');
+        if (!root) return;
+        const char = currentChar(); const glyph = getGlyph(char, false);
+        const hasGlyph = Boolean(glyph.strokes?.length);
+        if (!hasGlyph) { root.hidden = true; updatePreviewSizeStatuses(null, false); return; }
+        const result = state.quality[char];
+        updatePreviewSizeStatuses(result, true);
+        root.hidden = false;
+        root.classList.toggle('warning', Boolean(result?.warning));
+        $('#qualityResultTitle').textContent = result ? (result.warning ? t('qualityWarning') : result.advisory ? t('qualityAdvisory') : t('qualityOk')) : t('qualityChecking');
+        $('#qualityResultDetail').textContent = result ? qualityDetail(result) : t('qualityCheckingDetail');
+      }
+
+      // ----- Dependency-free TrueType writer -------------------------------------------------
+      // v1.0.0 still favors geometric fidelity over compact files. A stroke becomes one continuous
+      // vector outline when that outline is simple; complex/self-intersecting cases fall back to
+      // the v0.1.0 segmented rounded contours. No raster tracing or forced boolean union is used.
+      class ByteWriter {
+        constructor() { this.bytes = []; }
+        u8(v) { this.bytes.push(v & 255); }
+        u16(v) { v &= 0xffff; this.bytes.push((v >>> 8) & 255, v & 255); }
+        i16(v) { this.u16(v); }
+        u32(v) { v = Number(v) >>> 0; this.bytes.push((v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255); }
+        tag(text) { for (let i = 0; i < 4; i += 1) this.u8(text.charCodeAt(i) || 32); }
+        raw(data) { for (const byte of data) this.u8(byte); }
+        pad4() { while (this.bytes.length % 4) this.u8(0); }
+        out() { return Uint8Array.from(this.bytes); }
+      }
+      function clampI16(value) { return Math.max(-32768, Math.min(32767, Math.round(value))); }
+      function utf16be(text) { const w = new ByteWriter(); for (let i = 0; i < text.length; i += 1) w.u16(text.charCodeAt(i)); return w.out(); }
+      function checksum(bytes) {
+        let sum = 0 >>> 0;
+        const padded = Math.ceil(bytes.length / 4) * 4;
+        for (let i = 0; i < padded; i += 4) {
+          const value = (((bytes[i] || 0) << 24) >>> 0) + ((bytes[i + 1] || 0) << 16) + ((bytes[i + 2] || 0) << 8) + (bytes[i + 3] || 0);
+          sum = (sum + (value >>> 0)) >>> 0;
+        }
+        return sum >>> 0;
+      }
+      function writeU32At(bytes, offset, value) { const v = Number(value) >>> 0; bytes[offset] = (v >>> 24) & 255; bytes[offset + 1] = (v >>> 16) & 255; bytes[offset + 2] = (v >>> 8) & 255; bytes[offset + 3] = v & 255; }
+      function simplifyStroke(points) {
+        if (points.length <= 2) return points;
+        const result = [points[0]];
+        let last = points[0];
+        for (let i = 1; i < points.length - 1; i += 1) {
+          const p = points[i]; const dx = p.x - last.x; const dy = p.y - last.y;
+          if (dx * dx + dy * dy >= 16) { result.push(p); last = p; }
+        }
+        result.push(points[points.length - 1]);
+        return result;
+      }
+      function logicalToFont(point) {
+        return { x: 128 + point.x * 1.792, y: 1700 - point.y * 2.0, p: point.p, pen: point.pen };
+      }
+      function radiusToFont(point) {
+        const pressure = Number.isFinite(point.p) && point.p > 0 ? Math.max(.15, Math.min(1, point.p)) : .5;
+        const pressureScale = point.pen ? .7 + pressure * .6 : 1;
+        return Math.max(16, state.penWidth * 1.8 * pressureScale / 2);
+      }
+      function circleContour(point, radius, steps = 10) {
+        const contour = [];
+        for (let i = 0; i < steps; i += 1) {
+          const angle = Math.PI * 2 * i / steps;
+          contour.push({ x: clampI16(point.x + Math.cos(angle) * radius), y: clampI16(point.y + Math.sin(angle) * radius) });
+        }
+        return contour;
+      }
+      function capsuleContour(a, b, radius) {
+        const dx = b.x - a.x; const dy = b.y - a.y; const length = Math.hypot(dx, dy);
+        if (length < 1) return circleContour(a, radius, 10);
+        const theta = Math.atan2(dy, dx);
+        const contour = [];
+        const capSteps = 4;
+        for (let i = 0; i <= capSteps; i += 1) {
+          const angle = theta + Math.PI / 2 - Math.PI * i / capSteps;
+          contour.push({ x: clampI16(b.x + Math.cos(angle) * radius), y: clampI16(b.y + Math.sin(angle) * radius) });
+        }
+        for (let i = 0; i <= capSteps; i += 1) {
+          const angle = theta - Math.PI / 2 - Math.PI * i / capSteps;
+          contour.push({ x: clampI16(a.x + Math.cos(angle) * radius), y: clampI16(a.y + Math.sin(angle) * radius) });
+        }
+        return contour;
+      }
+      function segmentContours(points) {
+        const contours = [];
+        if (points.length === 1) return [circleContour(points[0], radiusToFont(points[0]))];
+        for (let i = 1; i < points.length; i += 1) {
+          const radius = (radiusToFont(points[i - 1]) + radiusToFont(points[i])) / 2;
+          contours.push(capsuleContour(points[i - 1], points[i], radius));
+        }
+        return contours;
+      }
+      function strokeOutlineContour(points) {
+        if (points.length < 2) return points.length ? circleContour(points[0], radiusToFont(points[0]), 12) : [];
+        const clean = [points[0]];
+        for (let i = 1; i < points.length; i += 1) {
+          const prev = clean[clean.length - 1]; const point = points[i];
+          if (Math.hypot(point.x - prev.x, point.y - prev.y) >= 1) clean.push(point);
+        }
+        if (clean.length < 2) return circleContour(clean[0], radiusToFont(clean[0]), 12);
+        const normals = clean.map((point, index) => {
+          const before = clean[Math.max(0, index - 1)];
+          const after = clean[Math.min(clean.length - 1, index + 1)];
+          let dx = after.x - before.x; let dy = after.y - before.y;
+          const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
+          return { x: -dy, y: dx, angle: Math.atan2(dy, dx) };
+        });
+        const left = []; const right = [];
+        for (let i = 0; i < clean.length; i += 1) {
+          const r = radiusToFont(clean[i]); const n = normals[i];
+          left.push({ x: clampI16(clean[i].x + n.x * r), y: clampI16(clean[i].y + n.y * r) });
+          right.push({ x: clampI16(clean[i].x - n.x * r), y: clampI16(clean[i].y - n.y * r) });
+        }
+        const contour = [...left];
+        const capSteps = 6;
+        const end = clean[clean.length - 1]; const endR = radiusToFont(end); const endTheta = normals[normals.length - 1].angle;
+        for (let i = 1; i < capSteps; i += 1) {
+          const angle = endTheta + Math.PI / 2 - Math.PI * i / capSteps;
+          contour.push({ x: clampI16(end.x + Math.cos(angle) * endR), y: clampI16(end.y + Math.sin(angle) * endR) });
+        }
+        contour.push(...right.slice().reverse());
+        const start = clean[0]; const startR = radiusToFont(start); const startTheta = normals[0].angle;
+        for (let i = 1; i < capSteps; i += 1) {
+          const angle = startTheta - Math.PI / 2 - Math.PI * i / capSteps;
+          contour.push({ x: clampI16(start.x + Math.cos(angle) * startR), y: clampI16(start.y + Math.sin(angle) * startR) });
+        }
+        return contour;
+      }
+      function orientation(a, b, c) { return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); }
+      function segmentsCross(a, b, c, d) {
+        const o1 = orientation(a, b, c); const o2 = orientation(a, b, d); const o3 = orientation(c, d, a); const o4 = orientation(c, d, b);
+        return ((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0));
+      }
+      function contourSelfIntersects(contour) {
+        const n = contour.length;
+        if (n < 4) return false;
+        for (let i = 0; i < n; i += 1) {
+          const a = contour[i]; const b = contour[(i + 1) % n];
+          for (let j = i + 2; j < n; j += 1) {
+            if (i === 0 && j === n - 1) continue;
+            const c = contour[j]; const d = contour[(j + 1) % n];
+            if (segmentsCross(a, b, c, d)) return true;
+          }
+        }
+        return false;
+      }
+      function polygonArea(contour) {
+        let area = 0;
+        for (let i = 0; i < contour.length; i += 1) {
+          const a = contour[i]; const b = contour[(i + 1) % contour.length];
+          area += a.x * b.y - b.x * a.y;
+        }
+        return area / 2;
+      }
+      function contoursForGlyph(glyph) {
+        const contours = [];
+        for (const stroke of glyph.strokes || []) {
+          const points = simplifyStroke(stroke.points || []).map(logicalToFont);
+          if (!points.length) continue;
+          if (points.length === 1) { contours.push(circleContour(points[0], radiusToFont(points[0]), 12)); continue; }
+          const continuous = strokeOutlineContour(points);
+          if (continuous.length >= 6 && Math.abs(polygonArea(continuous)) > 80 && !contourSelfIntersects(continuous)) contours.push(continuous);
+          else contours.push(...segmentContours(points));
+        }
+        return contours.filter(contour => contour.length >= 3);
+      }
+      function buildSimpleGlyph(contours) {
+        if (!contours.length) { const w = new ByteWriter(); w.i16(0); w.i16(0); w.i16(0); w.i16(0); w.i16(0); w.u16(0); return { bytes: w.out(), points: 0, contours: 0, xMin: 0, yMin: 0, xMax: 0, yMax: 0 }; }
+        const all = contours.flat();
+        const xMin = Math.min(...all.map(p => p.x)); const yMin = Math.min(...all.map(p => p.y));
+        const xMax = Math.max(...all.map(p => p.x)); const yMax = Math.max(...all.map(p => p.y));
+        const w = new ByteWriter();
+        w.i16(contours.length); w.i16(xMin); w.i16(yMin); w.i16(xMax); w.i16(yMax);
+        let end = -1;
+        for (const contour of contours) { end += contour.length; w.u16(end); }
+        w.u16(0);
+        for (const point of all) w.u8(0x01); // on-curve; 16-bit signed deltas follow
+        let prevX = 0;
+        for (const point of all) { w.i16(clampI16(point.x - prevX)); prevX = point.x; }
+        let prevY = 0;
+        for (const point of all) { w.i16(clampI16(point.y - prevY)); prevY = point.y; }
+        return { bytes: w.out(), points: all.length, contours: contours.length, xMin, yMin, xMax, yMax };
+      }
+      function buildCmap(mappings) {
+        const sorted = [...mappings].sort((a, b) => a.code - b.code);
+        const segCount = sorted.length + 1;
+        let power = 1; let selector = 0;
+        while (power * 2 <= segCount) { power *= 2; selector += 1; }
+        const sub = new ByteWriter();
+        const length = 16 + segCount * 8;
+        sub.u16(4); sub.u16(length); sub.u16(0); sub.u16(segCount * 2); sub.u16(power * 2); sub.u16(selector); sub.u16(segCount * 2 - power * 2);
+        sorted.forEach(item => sub.u16(item.code)); sub.u16(0xffff); sub.u16(0);
+        sorted.forEach(item => sub.u16(item.code)); sub.u16(0xffff);
+        sorted.forEach(item => sub.u16((item.glyph - item.code) & 0xffff)); sub.u16(1);
+        for (let i = 0; i < segCount; i += 1) sub.u16(0);
+        const subBytes = sub.out();
+        const w = new ByteWriter();
+        w.u16(0); w.u16(2);
+        w.u16(0); w.u16(3); w.u32(20);
+        w.u16(3); w.u16(1); w.u32(20);
+        w.raw(subBytes);
+        return w.out();
+      }
+      function buildNameTable(familyName, version) {
+        const safeFamily = familyName.trim() || 'My Handwriting';
+        const postScript = safeFamily.normalize('NFKD').replace(/[^A-Za-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 55) || 'HandwritingFont';
+        const entries = [
+          [1, safeFamily], [2, 'Regular'], [4, `${safeFamily} Regular`], [5, `Version ${version}`], [6, postScript]
+        ];
+        const encoded = entries.map(([nameId, value]) => ({ nameId, bytes: utf16be(value) }));
+        const w = new ByteWriter();
+        w.u16(0); w.u16(encoded.length); w.u16(6 + encoded.length * 12);
+        let offset = 0;
+        for (const item of encoded) {
+          w.u16(3); w.u16(1); w.u16(0x0409); w.u16(item.nameId); w.u16(item.bytes.length); w.u16(offset); offset += item.bytes.length;
+        }
+        encoded.forEach(item => w.raw(item.bytes));
+        return w.out();
+      }
+      function isWideGlyphChar(char) {
+        const code = char?.codePointAt(0) || 0;
+        return code >= 0x3000 || /[぀-ヿ㐀-鿿！-｠￠-￮]/u.test(char || '');
+      }
+      function shiftContours(contours, dx) {
+        if (!dx) return contours;
+        return contours.map(contour => contour.map(point => ({ x: clampI16(point.x + dx), y: point.y })));
+      }
+      function prepareGlyphShape(char, glyph) {
+        const contours = contoursForGlyph(glyph);
+        if (!contours.length) return null;
+        const all = contours.flat();
+        const xMin = Math.min(...all.map(point => point.x));
+        const xMax = Math.max(...all.map(point => point.x));
+        const width = Math.max(1, xMax - xMin);
+        let advance = UPM;
+        let dx = 0;
+        if (isWideGlyphChar(char)) {
+          const sideMargin = 96;
+          const center = (xMin + xMax) / 2;
+          dx = Math.round(UPM / 2 - center);
+          let shiftedMin = xMin + dx;
+          let shiftedMax = xMax + dx;
+          if (shiftedMin < sideMargin) { dx += sideMargin - shiftedMin; shiftedMin = sideMargin; shiftedMax = xMax + dx; }
+          if (shiftedMax > advance - sideMargin) { dx -= shiftedMax - (advance - sideMargin); }
+        } else {
+          const sideBearing = width < 320 ? 140 : 110;
+          advance = Math.max(520, Math.min(UPM, width + sideBearing * 2));
+          dx = Math.round(sideBearing - xMin);
+        }
+        const shifted = shiftContours(contours, dx);
+        const data = buildSimpleGlyph(shifted);
+        return { data, advance, lsb: data.xMin };
+      }
+
+      function buildFont(fontName, glyphEntries) {
+        const glyphs = [{ char: null, data: buildSimpleGlyph([]), advance: UPM, lsb: 0 }, { char: ' ', data: buildSimpleGlyph([]), advance: 720, lsb: 0 }];
+        const mappings = [];
+        for (const entry of glyphEntries) {
+          const code = entry.char.codePointAt(0);
+          if (code > 0xfffe || code === 0x20) continue;
+          const shaped = prepareGlyphShape(entry.char, entry.glyph);
+          if (!shaped?.data?.contours) continue;
+          const glyphIndex = glyphs.length;
+          glyphs.push({ char: entry.char, data: shaped.data, advance: shaped.advance, lsb: shaped.lsb });
+          mappings.push({ code, glyph: glyphIndex });
+        }
+        mappings.push({ code: 0x20, glyph: 1 });
+        const glyfWriter = new ByteWriter();
+        const locaOffsets = [];
+        let maxPoints = 0; let maxContours = 0;
+        glyphs.forEach(item => {
+          locaOffsets.push(glyfWriter.bytes.length);
+          glyfWriter.raw(item.data.bytes);
+          while (glyfWriter.bytes.length % 4) glyfWriter.u8(0);
+          maxPoints = Math.max(maxPoints, item.data.points || 0);
+          maxContours = Math.max(maxContours, item.data.contours || 0);
+        });
+        locaOffsets.push(glyfWriter.bytes.length);
+        const glyf = glyfWriter.out();
+        const locaW = new ByteWriter(); locaOffsets.forEach(offset => locaW.u32(offset));
+        const hmtxW = new ByteWriter(); glyphs.forEach(item => { hmtxW.u16(item.advance); hmtxW.i16(item.lsb || 0); });
+        const head = new ByteWriter();
+        const fontTimestamp = (Math.floor(Date.now() / 1000) + 2082844800) >>> 0; // seconds since 1904-01-01
+        head.u32(0x00010000); head.u32(0x00010000); head.u32(0); head.u32(0x5f0f3cf5); head.u16(0x000b); head.u16(UPM);
+        head.u32(0); head.u32(fontTimestamp); // created LONGDATETIME
+        head.u32(0); head.u32(fontTimestamp); // modified LONGDATETIME
+        const globalXMin = Math.min(...glyphs.map(item => item.data?.xMin ?? 0));
+        const globalYMin = Math.min(...glyphs.map(item => item.data?.yMin ?? 0));
+        const globalXMax = Math.max(...glyphs.map(item => item.data?.xMax ?? 0), ...glyphs.map(item => item.advance || 0));
+        const globalYMax = Math.max(...glyphs.map(item => item.data?.yMax ?? 0));
+        head.i16(globalXMin); head.i16(globalYMin); head.i16(globalXMax); head.i16(globalYMax); head.u16(0); head.u16(8); head.i16(2); head.i16(1); head.i16(0);
+        let advanceMax = 0; let minLeftSideBearing = 0; let minRightSideBearing = 0; let xMaxExtent = 0;
+        glyphs.forEach(item => {
+          const width = (item.data?.xMax || 0) - (item.data?.xMin || 0);
+          const lsb = item.lsb || 0;
+          const rsb = item.advance - lsb - width;
+          advanceMax = Math.max(advanceMax, item.advance);
+          minLeftSideBearing = Math.min(minLeftSideBearing, lsb);
+          minRightSideBearing = Math.min(minRightSideBearing, rsb);
+          xMaxExtent = Math.max(xMaxExtent, lsb + width);
+        });
+        const hhea = new ByteWriter();
+        hhea.u32(0x00010000); // version
+        hhea.i16(1800); hhea.i16(-248); hhea.i16(0); // ascender, descender, lineGap
+        hhea.u16(advanceMax || UPM); hhea.i16(minLeftSideBearing); hhea.i16(minRightSideBearing); hhea.i16(xMaxExtent || UPM); // horizontal extents
+        hhea.i16(1); hhea.i16(0); hhea.i16(0); // caretSlopeRise, caretSlopeRun, caretOffset
+        hhea.i16(0); hhea.i16(0); hhea.i16(0); hhea.i16(0); // reserved
+        hhea.i16(0); // metricDataFormat
+        hhea.u16(glyphs.length); // numberOfHMetrics
+        const maxp = new ByteWriter();
+        maxp.u32(0x00010000); maxp.u16(glyphs.length); maxp.u16(maxPoints); maxp.u16(maxContours); maxp.u16(0); maxp.u16(0); maxp.u16(2); maxp.u16(0); maxp.u16(0); maxp.u16(0); maxp.u16(0); maxp.u16(0); maxp.u16(0); maxp.u16(0); maxp.u16(0);
+        const os2 = new ByteWriter();
+        const codes = mappings.map(m => m.code).filter(code => code !== 0xffff);
+        const first = codes.length ? Math.min(...codes) : 0x20; const last = codes.length ? Math.max(...codes) : 0x20;
+        os2.u16(0); os2.i16(1600); os2.u16(400); os2.u16(5); os2.u16(0);
+        os2.i16(650); os2.i16(600); os2.i16(0); os2.i16(75); os2.i16(650); os2.i16(600); os2.i16(0); os2.i16(350); os2.i16(102); os2.i16(530); os2.i16(0);
+        for (let i = 0; i < 10; i += 1) os2.u8(0);
+        os2.u32(0); os2.u32(0); os2.u32(0); os2.u32(0); os2.tag('BKTY'); os2.u16(0x0040); os2.u16(first); os2.u16(last); os2.i16(1800); os2.i16(-248); os2.i16(0); os2.u16(1800); os2.u16(248);
+        const post = new ByteWriter(); post.u32(0x00030000); post.u32(0); post.i16(-150); post.i16(80); post.u32(0); post.u32(0); post.u32(0); post.u32(0); post.u32(0);
+        const tables = {
+          'OS/2': os2.out(), cmap: buildCmap(mappings), glyf, head: head.out(), hhea: hhea.out(), hmtx: hmtxW.out(), loca: locaW.out(), maxp: maxp.out(), name: buildNameTable(fontName, APP_CONFIG.version), post: post.out()
+        };
+        const tags = Object.keys(tables).sort();
+        const numTables = tags.length;
+        let maxPower = 1; let entrySelector = 0; while (maxPower * 2 <= numTables) { maxPower *= 2; entrySelector += 1; }
+        const directorySize = 12 + numTables * 16;
+        let offset = directorySize;
+        const records = [];
+        for (const tag of tags) {
+          const data = tables[tag];
+          records.push({ tag, checksum: checksum(data), offset, length: data.length });
+          offset += Math.ceil(data.length / 4) * 4;
+        }
+        const font = new Uint8Array(offset);
+        const header = new ByteWriter(); header.u32(0x00010000); header.u16(numTables); header.u16(maxPower * 16); header.u16(entrySelector); header.u16(numTables * 16 - maxPower * 16);
+        font.set(header.out(), 0);
+        let dirOffset = 12;
+        for (const record of records) {
+          const w = new ByteWriter(); w.tag(record.tag); w.u32(record.checksum); w.u32(record.offset); w.u32(record.length); font.set(w.out(), dirOffset); dirOffset += 16;
+          font.set(tables[record.tag], record.offset);
+        }
+        const headRecord = records.find(record => record.tag === 'head');
+        writeU32At(font, headRecord.offset + 8, 0);
+        const adjustment = (0xb1b0afba - checksum(font)) >>> 0;
+        writeU32At(font, headRecord.offset + 8, adjustment);
+        return { bytes: font, glyphCount: glyphs.length };
+      }
+
+      function setFontStatus(mode, messageKey) {
+        const root = $('#fontStatus');
+        root.classList.remove('ready', 'error', 'generating');
+        if (mode) root.classList.add(mode);
+        $('#fontStatusText').textContent = t(messageKey);
+      }
+      function scheduleFontGeneration(delay = 320) {
+        clearTimeout(generationTimer);
+        generationTimer = setTimeout(() => generatePreviewFont(), delay);
+      }
+      async function generatePreviewFont() {
+        const entries = state.chars.map(char => ({ char, glyph: getGlyph(char, false) })).filter(entry => entry.glyph.strokes?.length);
+        const generation = ++state.fontGeneration;
+        if (!entries.length) {
+          state.previewBytes = null; state.quality = Object.create(null);
+          $('#downloadButton').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true;
+          setFontStatus('', 'fontStatusEmpty'); updateCurrentQualityUi(); updateExportUi(); return;
+        }
+        setFontStatus('generating', 'fontStatusGenerating');
+        await new Promise(resolve => setTimeout(resolve, 0));
+        try {
+          const result = buildFont(state.fontName, entries);
+          if (generation !== state.fontGeneration) return;
+          const face = new FontFace(PREVIEW_FAMILY, result.bytes.buffer.slice(result.bytes.byteOffset, result.bytes.byteOffset + result.bytes.byteLength), { style: 'normal', weight: '400' });
+          await face.load();
+          if (generation !== state.fontGeneration) return;
+          if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } }
+          document.fonts.add(face); previewFace = face;
+          state.previewBytes = result.bytes;
+          analyzeAllGlyphQuality(entries);
+          updateWritingUi();
+          $('#downloadButton').disabled = false; $('#stepTabExport').disabled = false; $('#mobileTabExport').disabled = false;
+          setFontStatus('ready', 'fontStatusReady');
+          updateExportUi();
+        } catch (error) {
+          console.error(error);
+          if (generation !== state.fontGeneration) return;
+          state.previewBytes = null;
+          $('#downloadButton').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true;
+          setFontStatus('error', 'fontStatusError');
+          updateExportUi();
+        }
+      }
+
+      function formatBytes(bytes) {
+        if (!Number.isFinite(bytes)) return '—';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+      }
+      function updateExportUi() {
+        const doneChars = state.chars.filter(char => getGlyph(char, false).strokes?.length);
+        const done = doneChars.length;
+        $('#completedMetric').textContent = formatNumber(done);
+        $('#remainingMetric').textContent = formatNumber(Math.max(0, state.chars.length - done));
+        $('#fontSizeMetric').textContent = state.previewBytes ? formatBytes(state.previewBytes.byteLength) : '—';
+        const warningChars = doneChars.filter(char => state.quality[char]?.warning);
+        $('#qualityMetricValue').textContent = formatNumber(warningChars.length);
+        $('#qualityMetric').classList.toggle('warning', warningChars.length > 0);
+        const summary = $('#qualitySummary');
+        summary.classList.toggle('warning', warningChars.length > 0);
+        $('#qualitySummaryTitle').textContent = warningChars.length ? t('qualitySummaryWarning', warningChars.length) : (done ? t('qualitySummaryOk') : t('qualitySummaryEmpty'));
+        $('#qualitySummaryText').textContent = warningChars.length ? `${warningChars.slice(0, 12).join(' ')}${warningChars.length > 12 ? ' …' : ''}` : (done ? t('qualitySummaryOkDetail') : t('qualitySummaryEmptyDetail'));
+        $('#reviewWarningsButton').hidden = warningChars.length === 0;
+        $('#exportFontName').textContent = state.fontName || 'My Handwriting';
+        $('#exportGlyphCount').textContent = formatNumber(done + (done ? 2 : 0));
+        const review = $('#reviewText');
+        if (!review.value) review.value = state.language === 'ja' ? (doneChars.slice(0, 18).join('') || 'あいうえお') : (doneChars.slice(0, 18).join('') || 'ABC 123');
+        $('#reviewFont').textContent = review.value;
+      }
+      function normalizedFilenameBase() {
+        const fallback = 'handwriting-font';
+        const input = $('#outputFilename');
+        const cleaned = input.value.trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.+$/g, '').trim();
+        let base = cleaned.replace(/\.ttf$/i, '') || fallback;
+        if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) base = `${base}-font`;
+        base = base.slice(0, 120);
+        input.value = base;
+        return base;
+      }
+      function downloadFont() {
+        if (!state.previewBytes) return;
+        const blob = new Blob([state.previewBytes], { type: 'font/ttf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${normalizedFilenameBase()}.ttf`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        AppToast.show({ message: t('downloaded') });
+      }
+
+      function projectFilenameBase() {
+        const source = ($('#outputFilename')?.value || state.fontName || 'handwriting-font').trim();
+        let base = source.replace(/[\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.(?:ttf|handfont\.json|json)$/i, '').replace(/\.+$/g, '').trim();
+        if (!base) base = 'handwriting-font';
+        return base.slice(0, 100);
+      }
+      function downloadProjectFile() {
+        const payload = serializeProjectPayload();
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${projectFilenameBase()}.handfont.json`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+        AppToast.show({ message: t('projectSaved') });
+      }
+      function isSupportedProjectChar(char) {
+        if (typeof char !== 'string' || [...char].length !== 1 || /\s/u.test(char)) return false;
+        const code = char.codePointAt(0);
+        if (code > 0xfffe || (code >= 0xd800 && code <= 0xdfff)) return false;
+        if (code <= 0x001f || (code >= 0x007f && code <= 0x009f)) return false;
+        return true;
+      }
+      function normalizeProjectCharacters(rawChars) {
+        if (!Array.isArray(rawChars)) throw new Error('Missing project characters');
+        const chars = [];
+        const seen = new Set();
+        for (const char of rawChars) {
+          if (!isSupportedProjectChar(char) || seen.has(char)) continue;
+          seen.add(char);
+          chars.push(char);
+          if (chars.length > MAX_CHARS) throw new Error('Project character limit exceeded');
+        }
+        if (!chars.length) throw new Error('No supported characters');
+        return chars;
+      }
+      function normalizeProjectGlyphs(rawGlyphs, chars) {
+        const glyphs = Object.create(null);
+        const allowed = new Set(chars);
+        let totalPoints = 0;
+        for (const [char, glyph] of Object.entries(rawGlyphs || {})) {
+          if (!allowed.has(char) || !Array.isArray(glyph?.strokes)) continue;
+          const cleanStrokes = [];
+          for (const stroke of glyph.strokes) {
+            if (!Array.isArray(stroke?.points)) continue;
+            const points = [];
+            for (const point of stroke.points) {
+              if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) continue;
+              totalPoints += 1;
+              if (totalPoints > MAX_POINTS) throw new Error('Project point limit exceeded');
+              points.push({
+                x: Math.max(0, Math.min(LOGICAL_SIZE, Number(point.x))),
+                y: Math.max(0, Math.min(LOGICAL_SIZE, Number(point.y))),
+                p: Number.isFinite(point.p) ? Math.max(0, Math.min(1, Number(point.p))) : .5,
+                pen: Boolean(point.pen)
+              });
+            }
+            if (points.length) cleanStrokes.push({ points });
+          }
+          if (cleanStrokes.length) glyphs[char] = { strokes: cleanStrokes, redo: [] };
+        }
+        return { glyphs, totalPoints };
+      }
+      function normalizeImportedProject(saved) {
+        if (!saved || saved.schemaVersion !== 1 || !Array.isArray(saved.chars)) throw new Error('Invalid project schema');
+        if (saved.format && saved.format !== 'browser-kitty-handwriting-font-project') throw new Error('Unexpected project format');
+        const chars = normalizeProjectCharacters(saved.chars);
+        const normalizedGlyphs = normalizeProjectGlyphs(saved.glyphs, chars);
+        return {
+          fontName: typeof saved.fontName === 'string' ? (saved.fontName.trim().slice(0, 60) || 'My Handwriting') : 'My Handwriting',
+          customText: typeof saved.customText === 'string' ? saved.customText.slice(0, 1000) : '',
+          selectedSets: { hiragana: Boolean(saved.selectedSets?.hiragana), katakana: Boolean(saved.selectedSets?.katakana), upper: Boolean(saved.selectedSets?.upper), lower: Boolean(saved.selectedSets?.lower), digits: Boolean(saved.selectedSets?.digits), symbols: Boolean(saved.selectedSets?.symbols) },
+          chars,
+          currentIndex: Math.max(0, Math.min(Number(saved.currentIndex) || 0, chars.length - 1)),
+          penWidth: Math.max(28, Math.min(100, Number(saved.penWidth) || 56)),
+          guideCharacter: saved.guideCharacter !== false,
+          glyphs: normalizedGlyphs.glyphs,
+          totalPoints: normalizedGlyphs.totalPoints,
+          step: ['setup','write','export'].includes(saved.step) ? saved.step : 'write'
+        };
+      }
+      async function loadProjectFile(file) {
+        try {
+          const parsed = JSON.parse(await file.text());
+          const imported = normalizeImportedProject(parsed);
+          const hasCurrentWriting = completedCount() > 0;
+          if (hasCurrentWriting) {
+            const ok = await AppConfirm.ask({ title: t('projectLoadConfirmTitle'), message: t('projectLoadConfirmMessage'), confirmLabel: t('projectLoadConfirm'), cancelLabel: t('cancel'), tone: 'danger' });
+            if (!ok) return;
+          }
+          state.fontName = imported.fontName; state.customText = imported.customText; state.selectedSets = imported.selectedSets; state.chars = imported.chars; state.currentIndex = imported.currentIndex;
+          state.penWidth = imported.penWidth; state.guideCharacter = imported.guideCharacter; state.glyphs = imported.glyphs; state.totalPoints = imported.totalPoints; state.quality = Object.create(null); state.previewBytes = null; state.step = imported.step;
+          if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } previewFace = null; }
+          syncSetupInputs(); updateSelectionSummary(); $('#guideCharacterToggle').checked = state.guideCharacter; rebuildGlyphLists(); updateWritingUi(); updateExportUi(); renderCanvas();
+          $('#stepTabWrite').disabled = false; $('#mobileTabWrite').disabled = false; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true; $('#downloadButton').disabled = true;
+          saveProject(); setStep(imported.step === 'setup' ? 'setup' : 'write');
+          if (completedCount()) scheduleFontGeneration(0); else setFontStatus('', 'fontStatusEmpty');
+          AppToast.show({ message: t('projectLoaded') });
+        } catch (error) {
+          console.warn(error);
+          AppToast.show({ message: t('projectLoadFailed'), duration: 5600 });
+        } finally {
+          $('#projectFileInput').value = '';
+        }
+      }
+      function openProjectFilePicker() { $('#projectFileInput').click(); }
+
+      async function resetProject() {
+        const ok = await AppConfirm.ask({ title: t('newProjectTitle'), message: t('newProjectMessage'), confirmLabel: t('reset'), cancelLabel: t('cancel'), tone: 'danger' });
+        if (!ok) return;
+        try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+        state.fontName = 'My Handwriting'; state.customText = ''; state.selectedSets = { hiragana: true, katakana: false, upper: false, lower: false, digits: false, symbols: false };
+        state.chars = [...characterSets.hiragana]; state.currentIndex = 0; state.penWidth = 56; state.guideCharacter = true; state.glyphs = Object.create(null); state.quality = Object.create(null); state.previewBytes = null; state.totalPoints = 0; state.step = 'setup';
+        if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } previewFace = null; }
+        syncSetupInputs(); $('#guideCharacterToggle').checked = state.guideCharacter; updateSelectionSummary(); rebuildGlyphLists(); updateWritingUi(); updateExportUi(); renderCanvas();
+        $('#stepTabWrite').disabled = true; $('#mobileTabWrite').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true; $('#downloadButton').disabled = true;
+        setFontStatus('', 'fontStatusEmpty'); setStep('setup'); AppToast.show({ message: t('projectReset') });
+      }
+
+      function bindEvents() {
+        $('#languageButton').addEventListener('click', () => { state.language = state.language === 'ja' ? 'en' : 'ja'; try { localStorage.setItem(`${STORAGE_KEY}:language`, state.language); } catch { /* ignore */ } applyLanguage(); });
+        $('#helpButton').addEventListener('click', () => $('#helpDialog').showModal());
+        $('#closeHelpButton').addEventListener('click', () => $('#helpDialog').close());
+        $('#helpDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
+        $('#openGlyphPickerButton').addEventListener('click', () => $('#glyphPickerDialog').showModal());
+        $('#closeGlyphPickerButton').addEventListener('click', () => $('#glyphPickerDialog').close());
+        $('#glyphPickerDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
+        ['fontNameInput','customTextInput','setHiragana','setKatakana','setUpper','setLower','setDigits','setSymbols'].forEach(id => $(`#${id}`).addEventListener('input', updateSelectionSummary));
+        $('#startWritingButton').addEventListener('click', startWriting);
+        $('#newProjectButton').addEventListener('click', resetProject);
+        $('#loadProjectButtonTop').addEventListener('click', openProjectFilePicker);
+        $('#loadProjectButtonExport').addEventListener('click', openProjectFilePicker);
+        $('#saveProjectFileButton').addEventListener('click', downloadProjectFile);
+        $('#projectFileInput').addEventListener('change', event => { const file = event.target.files?.[0]; if (file) loadProjectFile(file); });
+        $('#backToSetupButton').addEventListener('click', () => setStep('setup'));
+        $('#backToWriteButton').addEventListener('click', () => setStep('write'));
+        $$('.step-tab, .mobile-tab').forEach(button => button.addEventListener('click', () => setStep(button.dataset.step)));
+        $('#previousCharButton').addEventListener('click', () => selectCharacter(state.currentIndex - 1));
+        $('#nextCharButton').addEventListener('click', () => { const action = $('#nextCharButton').dataset.action || 'next'; if (action === 'export') setStep('export'); else if (action === 'incomplete') goToNextIncomplete(); else selectCharacter(state.currentIndex + 1); });
+        $('#nextIncompleteButton').addEventListener('click', goToNextIncomplete);
+        $('#nextWarningButton').addEventListener('click', goToNextWarning);
+        $('#undoButton').addEventListener('click', undoCurrent);
+        $('#redoButton').addEventListener('click', redoCurrent);
+        $('#clearGlyphButton').addEventListener('click', clearCurrent);
+        $('#penWidthInput').addEventListener('input', event => { state.penWidth = Number(event.target.value); $('#penWidthValue').textContent = String(state.penWidth); state.quality = Object.create(null); scheduleAutosave(); renderCanvas(); scheduleFontGeneration(); updateCurrentQualityUi(); });
+        $('#guideCharacterToggle').addEventListener('change', event => { state.guideCharacter = Boolean(event.target.checked); scheduleAutosave(); renderCanvas(); });
+        $('#reviewWarningsButton').addEventListener('click', () => { const index = state.chars.findIndex(char => state.quality[char]?.warning); if (index >= 0) { state.currentIndex = index; updateWritingUi(); setStep('write'); renderCanvas(); } });
+        const canvas = $('#drawCanvas');
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerup', finishPointer);
+        canvas.addEventListener('pointercancel', finishPointer);
+        canvas.addEventListener('contextmenu', event => event.preventDefault());
+        window.addEventListener('resize', () => { if (state.step === 'write') { resizeCanvas(); renderCanvas(); } });
+        document.addEventListener('keydown', event => {
+          if (state.step !== 'write' || event.target.matches('input, textarea')) return;
+          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redoCurrent() : undoCurrent(); }
+          if (event.key === 'ArrowLeft' && !event.ctrlKey && !event.metaKey) { event.preventDefault(); selectCharacter(state.currentIndex - 1); }
+          if (event.key === 'ArrowRight' && !event.ctrlKey && !event.metaKey) { event.preventDefault(); selectCharacter(state.currentIndex + 1); }
+        });
+        $('#reviewText').addEventListener('input', event => { $('#reviewFont').textContent = event.target.value; });
+        $('#outputFilename').addEventListener('blur', normalizedFilenameBase);
+        $('#downloadButton').addEventListener('click', downloadFont);
+      }
+
+      function initialize() {
+        $('#versionBadge').textContent = `v${APP_CONFIG.version}`;
+        $('#buildVersion').textContent = APP_CONFIG.version;
+        $('#builtAt').textContent = BUILD_MANIFEST.generatedAtUtc || '—';
+        $('#dependencyCount').textContent = String(BUILD_MANIFEST.dependencies?.length || 0);
+        const restored = restoreProject();
+        syncSetupInputs();
+        $('#guideCharacterToggle').checked = state.guideCharacter;
+        updateSelectionSummary();
+        rebuildGlyphLists();
+        updateWritingUi();
+        updateExportUi();
+        bindEvents();
+        applyLanguage();
+        if (state.chars.length && restored) { $('#stepTabWrite').disabled = false; $('#mobileTabWrite').disabled = false; }
+        if (restored && completedCount()) scheduleFontGeneration(0);
+        setStep(restored && state.step === 'write' ? 'write' : 'setup');
+        if (restored) setTimeout(() => AppToast.show({ message: t('restoredProject') }), 200);
+      }
+
+      // Lightweight regression hooks for local/headless verification; not exposed in normal UI.
+      window.__HANDWRITING_FONT_TEST__ = Object.freeze({
+        buildDemoFont() {
+          const demoGlyph = { strokes: [{ points: [{ x: 280, y: 500, p: .5, pen: false }, { x: 720, y: 500, p: .5, pen: false }] }], redo: [] };
+          return buildFont('BrowserKittyTest', [{ char: 'B', glyph: demoGlyph }]).bytes;
+        },
+        normalizeImportedProject,
+        serializeProjectPayload,
+        limits: Object.freeze({ maxChars: MAX_CHARS, maxPoints: MAX_POINTS }),
+        checksum, buildFont
+      });
+
+      initialize();
+    })();
+  </script>
+</body>
+</html>

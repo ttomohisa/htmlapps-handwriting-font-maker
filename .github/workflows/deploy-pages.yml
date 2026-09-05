@@ -1,0 +1,97 @@
+name: Deploy standalone app to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    outputs:
+      pages-ready: ${{ steps.pages-status.outputs.ready }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build and verify standalone HTML
+        shell: pwsh
+        run: ./scripts/check-repository.ps1
+
+      - name: Check whether GitHub Pages is enabled
+        id: pages-status
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$env:GITHUB_REPOSITORY/pages" --silent 2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+            "ready=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            Write-Host "GitHub Pages is enabled. The deployment will continue."
+            exit 0
+          }
+
+          "ready=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+          @"
+          ## GitHub Pages is not enabled yet
+
+          The standalone HTML was built successfully, but deployment was skipped.
+
+          1. Open **Settings → Pages** in this repository.
+          2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+          3. Open **Actions**, select this workflow, and choose **Re-run all jobs**.
+
+          This one-time repository setting cannot be enabled with the default `GITHUB_TOKEN`.
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+
+          Write-Warning "GitHub Pages is not enabled. Deployment is skipped; see the workflow summary for setup steps."
+          exit 0
+
+      - name: Configure GitHub Pages
+        if: steps.pages-status.outputs.ready == 'true'
+        uses: actions/configure-pages@v6
+
+      - name: Upload GitHub Pages artifact
+        if: steps.pages-status.outputs.ready == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+      - name: Upload standalone build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: standalone-html-${{ github.sha }}
+          path: |
+            dist/index.html
+            dist/index.self-extract.html
+            dist/dependency-manifest.json
+            dist/self-extract-manifest.json
+            dist/.nojekyll
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    if: needs.build.outputs.pages-ready == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

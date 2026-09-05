@@ -1,0 +1,48 @@
+name: Validate standalone HTML
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "app.config.json"
+      - "dependencies.json"
+      - "dependencies.lock.json"
+      - "schemas/dependencies*.json"
+      - ".github/workflows/dependency-updates.yml"
+      - "build-standalone.ps1"
+      - "build-standalone.bat"
+      - "scripts/build-self-extract.ps1"
+      - "scripts/verify-self-extract.ps1"
+      - ".github/workflows/build-standalone.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build and verify standalone HTML
+        shell: pwsh
+        run: ./scripts/check-repository.ps1
+
+      - name: Upload standalone artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: standalone-html-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            dist/index.html
+            dist/index.self-extract.html
+            dist/dependency-manifest.json
+            dist/self-extract-manifest.json
+            dist/.nojekyll
+          if-no-files-found: error
+          retention-days: 14

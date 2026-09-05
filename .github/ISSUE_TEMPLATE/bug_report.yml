@@ -1,0 +1,55 @@
+name: Bug report
+description: Report reproducible incorrect behavior
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: How was the app opened?
+      options:
+        - Local dist/index.html
+        - Local dist/index.self-extract.html
+        - GitHub Pages
+        - Other static hosting
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors or sample file
+      description: Remove sensitive data before attaching anything.
