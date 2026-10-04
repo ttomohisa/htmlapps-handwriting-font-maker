@@ -15,6 +15,7 @@ on:
       - ".github/workflows/dependency-updates.yml"
       - "build-standalone.ps1"
       - "build-standalone.bat"
+      - "handwriting-font-maker.html"
       - "scripts/build-self-extract.ps1"
       - "scripts/verify-self-extract.ps1"
       - ".github/workflows/build-standalone.yml"
@@ -29,6 +30,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
 
       - name: Build and verify standalone HTML
         shell: pwsh

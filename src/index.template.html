@@ -175,6 +175,18 @@
     .side-head span { color: var(--muted); font-size: 11px; }
     .glyph-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 10px; overflow: auto; }
     .glyph-button { position: relative; display: grid; place-items: center; min-width: 0; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 18px; cursor: pointer; }
+    .glyph-button[hidden] { display: none; }
+    .glyph-filters { display: grid; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    .glyph-filter { display: flex; align-items: center; justify-content: space-between; gap: 5px; min-height: 44px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 12px; cursor: pointer; }
+    .glyph-filter[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .glyph-filter-count { font-variant-numeric: tabular-nums; }
+    .glyph-empty { margin: 0; padding: 12px; color: var(--muted); font-size: 12px; }
+    .glyph-picker-body .glyph-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0 0 10px; margin-bottom: 10px; }
+    .glyph-picker-body .glyph-filter { padding: 6px; font-size: 11px; }
+    .project-backup-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 14px; }
+    .project-backup-bar .field { min-width: 0; margin: 0; }
+    @media (max-width: 700px) { .project-backup-bar { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
+    .backup-hint { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
     .glyph-button:hover { border-color: var(--line-strong); background: var(--surface-hover); }
     .glyph-button.current { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); background: var(--accent-soft); }
     .glyph-button.done::after { content: ''; position: absolute; right: 4px; top: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
@@ -503,10 +515,27 @@
         </div>
       </div>
 
+      <div class="project-backup-bar">
+        <label class="field" for="projectFilenameWrite">
+          <span class="field-label" data-i18n="projectFilename">バックアップのファイル名</span>
+          <span class="filename-control">
+            <input class="filename-input" id="projectFilenameWrite" type="text" maxlength="120" autocomplete="off" spellcheck="false" value="handwriting-font" aria-describedby="projectFilenameHint">
+            <span class="filename-extension" aria-hidden="true">.handfont.json</span>
+          </span>
+          <span class="backup-hint" id="projectFilenameHint" data-i18n="backupAnytime">TTF生成中やエラー時も、編集用データを保存できます。</span>
+        </label>
+        <button class="button" id="saveProjectFileButtonWrite" type="button" data-i18n="saveEditableProject">編集用データを保存</button>
+      </div>
       <div class="write-layout">
         <aside class="glyph-sidebar" aria-label="Characters">
           <div class="side-head"><strong data-i18n="characters">文字</strong><span id="sidebarProgress">0 / 0</span></div>
+          <div class="glyph-filters" id="glyphFilters" role="group" data-i18n-aria-label="filterCharacters" aria-label="文字の絞り込み">
+            <button class="glyph-filter" type="button" data-glyph-filter="all" aria-pressed="true"><span data-i18n="filterAll">すべて</span><span class="glyph-filter-count" data-filter-count="all">0</span></button>
+            <button class="glyph-filter" type="button" data-glyph-filter="unfinished" aria-pressed="false"><span data-i18n="filterUnfinished">未入力</span><span class="glyph-filter-count" data-filter-count="unfinished">0</span></button>
+            <button class="glyph-filter" type="button" data-glyph-filter="review" aria-pressed="false"><span data-i18n="filterReview">要確認</span><span class="glyph-filter-count" data-filter-count="review">0</span></button>
+          </div>
           <div class="glyph-list" id="glyphList"></div>
+          <p class="glyph-empty" id="glyphListEmpty" role="status" hidden></p>
         </aside>
 
         <div class="drawing-card">
@@ -683,7 +712,15 @@
       <h2 id="glyphPickerTitle" data-i18n="characterList">文字一覧</h2>
       <button class="icon-button" id="closeGlyphPickerButton" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <div class="glyph-picker-body"><div class="glyph-picker-grid" id="glyphPickerGrid"></div></div>
+    <div class="glyph-picker-body">
+      <div class="glyph-filters" id="glyphPickerFilters" role="group" data-i18n-aria-label="filterCharacters" aria-label="文字の絞り込み">
+        <button class="glyph-filter" type="button" data-glyph-filter="all" aria-pressed="true"><span data-i18n="filterAll">すべて</span><span class="glyph-filter-count" data-filter-count="all">0</span></button>
+        <button class="glyph-filter" type="button" data-glyph-filter="unfinished" aria-pressed="false"><span data-i18n="filterUnfinished">未入力</span><span class="glyph-filter-count" data-filter-count="unfinished">0</span></button>
+        <button class="glyph-filter" type="button" data-glyph-filter="review" aria-pressed="false"><span data-i18n="filterReview">要確認</span><span class="glyph-filter-count" data-filter-count="review">0</span></button>
+      </div>
+      <div class="glyph-picker-grid" id="glyphPickerGrid"></div>
+      <p class="glyph-empty" id="glyphPickerEmpty" role="status" hidden></p>
+    </div>
   </dialog>
 
   <dialog id="helpDialog" aria-labelledby="helpTitle">
@@ -699,6 +736,7 @@
         <li data-i18n="helpStep2">文字を書く画面で、薄いお手本文字をなぞるようにマウス・指・ペンで書けます。お手本はON/OFFでき、戻す・やり直す・消去も使えます。</li>
         <li data-i18n="helpStep3">「確認・保存」で実際に生成したフォントの表示を確認し、TTFを保存します。</li>
       </ol>
+      <p data-i18n="helpResume">書く画面の「編集用データを保存」で、TTF生成中やエラー時も作業をバックアップできます。文字一覧を「未入力」「要確認」で絞り込めます。</p>
       <h3 data-i18n="helpPrivacyTitle">プライバシー</h3>
       <p data-i18n="helpPrivacyBody">手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。</p>
       <h3 data-i18n="helpQualityTitle">v1.0.0の変換方式</h3>
@@ -783,21 +821,25 @@
           brandMeta: '単一HTML・完全ローカル処理', introTitle: '書いた文字を、そのままフォントへ', lead: '文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。', localBadge: '完全ローカル処理',
           helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
           setupTitle: '作る文字を選ぶ', setupLead: '必要な文字だけ選べます。空白は自動でフォントに含まれます。', projectData: '作業データ', projectDataHelp: '書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。', saveProjectFile: '作業データを保存', loadProject: '作業データを読み込む', projectSaved: '作業データを保存しました。', projectLoaded: '作業データを読み込みました。', projectLoadFailed: '作業データを読み込めませんでした。ファイルが壊れているか、このアプリの形式ではない可能性があります。', projectLoadConfirmTitle: '作業データを読み込みますか？', projectLoadConfirmMessage: '現在の手書き内容と設定は、読み込む作業データで置き換わります。', projectLoadConfirm: '読み込む', newProject: '新しい作業', fontSettings: 'フォント設定', fontName: 'フォント名', fontNameHelp: 'フォント内部の名前にも使われます。', customText: '使いたい文字だけ追加', customPlaceholder: '例: Browser Kitty 2026 / ありがとう', customHelp: '同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。', characterSets: '文字セット', hiragana: 'ひらがな', katakana: 'カタカナ', uppercase: '英大文字', lowercase: '英小文字', digits: '数字', symbols: 'よく使う記号', charactersToWrite: '文字を書きます', selectionNote: 'あとから文字セットへ戻って変更できます。', startWriting: '文字を書き始める',
+          projectFilename: 'バックアップのファイル名', retainedCharacterLimit: '保存済みの文字を含めて最大180文字です。不要な文字を選び直して線を消すか、作業をバックアップしてから新しい作業を始めてください。',
+          saveEditableProject: '編集用データを保存', backupAnytime: 'TTF生成中やエラー時も、書く画面から編集用データを保存できます。', filterCharacters: '文字の絞り込み', filterAll: 'すべて', filterUnfinished: '未入力', filterReview: '要確認', filterNoneUnfinished: 'すべての文字が入力済みです。', filterNoneReview: '要確認の文字はありません。', filterChecking: 'フォント生成後に要確認の文字を表示します。', helpResume: '書く画面の「編集用データを保存」で、TTF生成中やエラー時も作業をバックアップできます。文字一覧を「未入力」「要確認」で絞り込めます。絞り込みでは現在の文字や前へ・次への順序は変わりません。',
           writeTitle: '文字を書く', progressLabel: '入力進捗', nextIncomplete: '次の未入力', nextWarning: '要確認へ', reviewAndSave: '確認・保存', guideCharacter: 'お手本', autosave: '自動保存', editCharacters: '文字を選び直す', characters: '文字', characterList: '文字一覧', canvasLabel: '手書き入力欄', canvasHint: 'ここに文字を書いてください', undo: '戻す', redo: 'やり直す', clear: '消去', penWidth: '線の太さ', previous: '前へ', next: '次へ', fontPreview: 'フォント化結果', fontPreviewHelp: '生成したTTFを12 / 16 / 24 / 48pxで読み直し、各サイズの見え方を確認します。', fontStatusEmpty: '文字を書くと実フォントの確認ができます。', fontStatusGenerating: 'フォントを生成しています…', fontStatusReady: '生成したTTFで表示しています。', fontStatusError: 'フォントを生成できませんでした。文字を少し書き直してください。', needsReview: '要確認', sizeOk: 'OK', sizeAdvisory: '参考', sizeWarning: '要確認', sizeChecking: '確認中', qualitySizesWarning: sizes => `${sizes}で要確認です。`, reviewWarnings: '確認する', qualityChecking: '字形を確認しています…', qualityCheckingDetail: '生成したフォントを12 / 16 / 24 / 48pxで確認しています。', qualityOk: '確認したサイズで大きな問題は見つかりませんでした', qualityAdvisory: '12pxは参考確認です', qualityWarning: '小さいサイズで形が変わる可能性があります', qualityDetailOk: '16 / 24pxを48pxの実フォント表示と比較しました。12pxは参考表示です。', qualityDetailAdvisory: '12pxだけ細部が変わる可能性があります。小さい文字では一般的に起こるため、要確認には数えません。', qualityDetailGap: '16pxで別の線同士の間隔がかなり狭くなっています。実フォント表示を確認してください。', qualityDetailTopology: '48pxでは分かれている部分や内側の空間が、小さいサイズでは結合・消失しています。', qualityDetailBoth: '小さいサイズで形の結合・消失があり、線同士の間隔も狭くなっています。', qualitySummaryOk: '要確認の文字はありません', qualitySummaryOkDetail: '16 / 24pxを中心に実フォントの形を確認しました。12pxは参考表示です。', qualitySummaryEmpty: '字形チェックはまだありません', qualitySummaryEmptyDetail: '文字を書くと自動で確認します。', qualitySummaryWarning: count => `${count}文字を確認してください`,
           exportTitle: '確認して保存', exportLead: '生成したフォントで文章を確認してから保存できます。', backToWriting: '文字を書く画面へ', tryFont: '文章で確認', tryFontHelp: '収録していない文字は端末の通常フォントで表示されます。', reviewPlaceholder: '今日はいい天気です。Browser Kitty 2026', completed: '入力済み', remaining: '未入力', fontSize: 'TTFサイズ', saveFont: 'フォントを保存', saveFontHelp: 'v1.0.0ではTrueType (.ttf) に対応しています。', outputFilename: 'ファイル名', outputFilenameHint: '拡張子 .ttf は自動で付きます。', downloadTtf: 'TTFを保存', fontFamily: 'フォント名', glyphCount: '収録文字', format: '形式', processing: '処理', fullyLocal: '完全ローカル',
           buildInfo: 'ビルド情報', appVersion: 'アプリ版数', builtAt: '生成日時', dependencies: '内包依存', footer: 'ブラウザ内でフォントを生成します',
           helpBasicsTitle: '基本操作', helpStep1: '作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。', helpStep2: '文字を書く画面で、薄いお手本文字をなぞるようにマウス・指・ペンで書けます。お手本はON/OFFでき、戻す・やり直す・消去も使えます。', helpStep3: '「確認・保存」で実際に生成したフォントの表示を確認し、TTFを保存します。', helpPrivacyTitle: 'プライバシー', helpPrivacyBody: '手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。', helpQualityTitle: 'v1.0.0の変換方式', helpQualityBody: '書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。v1.0.0では生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。', helpNotesTitle: '注意事項', helpNoteV01: 'v1.0.0はTrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。', helpNoteStorage: '作業は端末内へ自動保存します。v1.0.0では作業データをJSONで明示保存・読み込みできるため、バックアップや別端末への移動にも使えます。', helpNoteUnicode: 'v1.0.0はBMP内の文字を対象にしています。絵文字など一部の文字は対象外です。', helpOffline: '配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。',
-          unsupported: count => `${count}文字はv1.0.0の対象外です（絵文字などBMP外の文字）。`, limitReached: `v1.0.0では最大${MAX_CHARS}文字までです。先頭から${MAX_CHARS}文字を使います。`, noCharacters: '1文字以上選んでください。', clearedGlyph: 'この文字を消去しました。', undoAction: '元に戻す', restored: '元に戻しました。', projectReset: '作業を初期化しました。', newProjectTitle: '新しい作業を始めますか？', newProjectMessage: '現在の手書きデータと設定を端末内の自動保存から削除します。', cancel: 'キャンセル', reset: '初期化する', downloaded: 'TTFを保存しました。', autosaveFailed: '端末内への自動保存ができませんでした。必要ならTTFを早めに保存してください。', restoredProject: '前回の作業を復元しました。', restoreFailed: '保存されていた作業を読み込めなかったため、新しい状態で開始しました。', pointLimit: 'この作業では点の数が上限に達しました。不要な文字を減らして続けてください。'
+          unsupported: count => `${count}文字はv1.0.0の対象外です（絵文字などBMP外の文字）。`, limitReached: `v1.0.0では最大${MAX_CHARS}文字までです。先頭から${MAX_CHARS}文字を使います。`, noCharacters: '1文字以上選んでください。', clearedGlyph: 'この文字を消去しました。', undoAction: '元に戻す', restored: '元に戻しました。', projectReset: '作業を初期化しました。', newProjectTitle: '新しい作業を始めますか？', newProjectMessage: '現在の手書きデータと設定を端末内の自動保存から削除します。', cancel: 'キャンセル', reset: '初期化する', downloaded: 'TTFを保存しました。', autosaveFailed: '端末内への自動保存ができませんでした。「編集用データを保存」でバックアップしてください。', restoredProject: '前回の作業を復元しました。', restoreFailed: '保存されていた作業を読み込めなかったため、新しい状態で開始しました。', pointLimit: '点の数が上限に達しました。不要な文字を選んで線を消してください。文字を選択から外すだけでは保存済みの点は減りません。'
         },
         en: {
           brandMeta: 'Single HTML · Fully local processing', introTitle: 'Turn your handwriting into a font', lead: 'Write characters in the browser and save them as a TrueType font. The app builds font outlines directly from pen coordinates instead of tracing a raster image.', localBadge: 'Fully local processing',
           helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
           setupTitle: 'Choose characters', setupLead: 'Select only the characters you need. Space is added automatically.', projectData: 'Project data', projectDataHelp: 'Save handwriting strokes and settings as JSON, then load them on another device to continue.', saveProjectFile: 'Save project data', loadProject: 'Load project data', projectSaved: 'Saved the project data.', projectLoaded: 'Loaded the project data.', projectLoadFailed: 'The project data could not be loaded. The file may be damaged or not created by this app.', projectLoadConfirmTitle: 'Load project data?', projectLoadConfirmMessage: 'Your current handwriting and settings will be replaced by the loaded project data.', projectLoadConfirm: 'Load', newProject: 'New project', fontSettings: 'Font settings', fontName: 'Font name', fontNameHelp: 'This is also used inside the generated font.', customText: 'Add only the characters you need', customPlaceholder: 'Example: Browser Kitty 2026 / Hello!', customHelp: 'Duplicate characters are removed. v1.0.0 supports BMP characters.', characterSets: 'Character sets', hiragana: 'Hiragana', katakana: 'Katakana', uppercase: 'Uppercase A-Z', lowercase: 'Lowercase a-z', digits: 'Digits', symbols: 'Common symbols', charactersToWrite: 'characters to write', selectionNote: 'You can return here and change the selection later.', startWriting: 'Start writing',
+          projectFilename: 'Backup filename', retainedCharacterLimit: 'The 180-character limit includes saved drawings. Reselect and clear drawings you no longer need, or back up this project before starting a new one.',
+          saveEditableProject: 'Save editable project', backupAnytime: 'You can save an editable backup from the writing screen while the TTF is generating or unavailable.', filterCharacters: 'Filter characters', filterAll: 'All', filterUnfinished: 'Unfinished', filterReview: 'Review', filterNoneUnfinished: 'All characters are written.', filterNoneReview: 'No characters need review.', filterChecking: 'Review characters appear after font generation.', helpResume: 'Use Save editable project on the writing screen to back up your strokes even while the TTF is generating or unavailable. Filter the character list by Unfinished or Review. Filtering keeps the current character and Previous/Next order unchanged.',
           writeTitle: 'Write characters', progressLabel: 'Writing progress', nextIncomplete: 'Next unfinished', nextWarning: 'Next review', reviewAndSave: 'Review & save', guideCharacter: 'Guide', autosave: 'Autosaved locally', editCharacters: 'Edit character selection', characters: 'Characters', characterList: 'Character list', canvasLabel: 'Handwriting input', canvasHint: 'Write the character here', undo: 'Undo', redo: 'Redo', clear: 'Clear', penWidth: 'Pen width', previous: 'Previous', next: 'Next', fontPreview: 'Generated font', fontPreviewHelp: 'The generated TTF is reloaded at 12 / 16 / 24 / 48px so each size can be checked.', fontStatusEmpty: 'Write a character to preview the actual font.', fontStatusGenerating: 'Generating the font…', fontStatusReady: 'Previewing the generated TTF.', fontStatusError: 'The font could not be generated. Try rewriting this character.', needsReview: 'Review', sizeOk: 'OK', sizeAdvisory: 'Reference', sizeWarning: 'Review', sizeChecking: 'Checking', qualitySizesWarning: sizes => `Review at ${sizes}.`, reviewWarnings: 'Review', qualityChecking: 'Checking the glyph…', qualityCheckingDetail: 'The generated font is being checked at 12 / 16 / 24 / 48px.', qualityOk: 'No major issue was found at the checked sizes', qualityAdvisory: '12px is a reference check', qualityWarning: 'The glyph shape may change at small sizes', qualityDetailOk: 'Compared the actual font at 16 / 24px against 48px. The 12px row is informational.', qualityDetailAdvisory: 'Only the 12px rendering loses some detail. This is common at very small text sizes, so it is not counted as a review warning.', qualityDetailGap: 'Separate strokes become unusually tight at 16px. Review the actual font preview.', qualityDetailTopology: 'Parts that are separate, or enclosed spaces visible at 48px, merge or disappear at a smaller size.', qualityDetailBoth: 'The smaller rendering changes shape and separate strokes also become unusually tight.', qualitySummaryOk: 'No glyphs need review', qualitySummaryOkDetail: 'Checked actual font shape mainly at 16 / 24px. The 12px row is informational.', qualitySummaryEmpty: 'No glyph checks yet', qualitySummaryEmptyDetail: 'Checks run automatically after you write a character.', qualitySummaryWarning: count => `${count} glyph(s) need review`,
           exportTitle: 'Review and save', exportLead: 'Try a sentence using the generated font before saving it.', backToWriting: 'Back to writing', tryFont: 'Try a sentence', tryFontHelp: 'Characters not included in your font fall back to the system font.', reviewPlaceholder: 'Hello from Browser Kitty 2026', completed: 'Completed', remaining: 'Remaining', fontSize: 'TTF size', saveFont: 'Save font', saveFontHelp: 'v1.0.0 exports TrueType (.ttf).', outputFilename: 'Filename', outputFilenameHint: 'The .ttf extension is added automatically.', downloadTtf: 'Save TTF', fontFamily: 'Font name', glyphCount: 'Glyphs', format: 'Format', processing: 'Processing', fullyLocal: 'Fully local',
           buildInfo: 'Build information', appVersion: 'App version', builtAt: 'Built at', dependencies: 'Embedded dependencies', footer: 'Generates the font in your browser',
           helpBasicsTitle: 'Basic steps', helpStep1: 'Choose a character set or type text under “Add only the characters you need.”', helpStep2: 'On the writing screen, draw with a mouse, finger, or pen while using the faint guide character if helpful. The guide can be turned on or off, and Undo, Redo, and Clear are available.', helpStep3: 'Open “Review & save,” check the actual generated font, then save the TTF.', helpPrivacyTitle: 'Privacy', helpPrivacyBody: 'Handwriting coordinates and font generation stay inside your browser. This app does not send your characters or generated font to an external server.', helpQualityTitle: 'How v1.0.0 converts strokes', helpQualityBody: 'Instead of rasterizing your writing and tracing an image, the app writes TrueType outlines directly from pen coordinates. v1.0.0 shows the generated TTF at 12 / 16 / 24 / 48px and mainly flags actual merging or disappearing details at 16 / 24px compared with 48px. The 12px row is informational. Warnings never modify the glyph automatically.', helpNotesTitle: 'Notes', helpNoteV01: 'v1.0.0 supports TrueType (TTF) export, size-by-size glyph checks, and project save/load. WOFF2, detailed spacing controls, and alternate glyphs are not included.', helpNoteStorage: 'Work is autosaved on this device. v1.0.0 can also explicitly save and load project JSON for backup or moving work between devices.', helpNoteUnicode: 'v1.0.0 supports BMP characters. Some characters such as emoji are outside this range.', helpOffline: 'The release HTML contains the runtime code and does not make external network requests.',
-          unsupported: count => `${count} character(s) are outside the v1.0.0 BMP range, such as some emoji.`, limitReached: `v1.0.0 supports up to ${MAX_CHARS} drawable characters. The first ${MAX_CHARS} are used.`, noCharacters: 'Choose at least one character.', clearedGlyph: 'Cleared this character.', undoAction: 'Undo', restored: 'Restored.', projectReset: 'Started a new project.', newProjectTitle: 'Start a new project?', newProjectMessage: 'This removes the current handwriting and settings from local autosave.', cancel: 'Cancel', reset: 'Reset', downloaded: 'Saved the TTF.', autosaveFailed: 'Local autosave is unavailable. Save the TTF early if the work matters.', restoredProject: 'Restored your previous work.', restoreFailed: 'Saved work could not be loaded, so a clean project was opened.', pointLimit: 'This project reached the point limit. Reduce the character set before continuing.'
+          unsupported: count => `${count} character(s) are outside the v1.0.0 BMP range, such as some emoji.`, limitReached: `v1.0.0 supports up to ${MAX_CHARS} drawable characters. The first ${MAX_CHARS} are used.`, noCharacters: 'Choose at least one character.', clearedGlyph: 'Cleared this character.', undoAction: 'Undo', restored: 'Restored.', projectReset: 'Started a new project.', newProjectTitle: 'Start a new project?', newProjectMessage: 'This removes the current handwriting and settings from local autosave.', cancel: 'Cancel', reset: 'Reset', downloaded: 'Saved the TTF.', autosaveFailed: 'Local autosave is unavailable. Use Save editable project to back up your work.', restoredProject: 'Restored your previous work.', restoreFailed: 'Saved work could not be loaded, so a clean project was opened.', pointLimit: 'This project reached the point limit. Reselect and clear handwriting you no longer need. Deselecting characters keeps their saved points.'
         }
       };
 
@@ -815,6 +857,10 @@
         quality: Object.create(null),
         previewBytes: null,
         fontGeneration: 0,
+        previewGeneration: null,
+        fontStatusKey: 'fontStatusEmpty',
+        fontStatusMode: '',
+        glyphFilter: 'all',
         totalPoints: 0,
         saveWarned: false
       };
@@ -823,6 +869,11 @@
       let activePointer = null;
       let activeStroke = null;
       let autosaveTimer = 0;
+      let projectGeneration = 0;
+      let importGeneration = 0;
+      let activeStrokeOwner = null;
+      let clearUndoToken = null;
+      const glyphRevisions = new Map();
 
       function detectLanguage() {
         if (APP_CONFIG.defaultLanguage === 'ja' || APP_CONFIG.defaultLanguage === 'en') return APP_CONFIG.defaultLanguage;
@@ -878,7 +929,9 @@
         $('#penWidthValue').textContent = String(state.penWidth);
       }
       function updateSelectionSummary() {
+        const previousName = state.fontName;
         state.fontName = $('#fontNameInput').value.trim() || 'My Handwriting';
+        if (state.fontName !== previousName) scheduleFontGeneration();
         state.customText = $('#customTextInput').value;
         state.selectedSets = {
           hiragana: $('#setHiragana').checked, katakana: $('#setKatakana').checked, upper: $('#setUpper').checked,
@@ -916,6 +969,7 @@
           if (currentResolver) currentResolver(result);
         }
         function ask({ title: heading, message: body, confirmLabel, cancelLabel, tone = 'default' } = {}) {
+          finishActiveStroke();
           if (dialog.open) finish(false);
           title.textContent = heading || '';
           message.textContent = body || '';
@@ -965,11 +1019,13 @@
         updateSelectionSummary();
         updateWritingUi();
         updateExportUi();
+        setFontStatus(state.fontStatusMode, state.fontStatusKey);
       }
 
       function setStep(step) {
+        finishActiveStroke();
         if (step === 'write' && !state.chars.length) return;
-        if (step === 'export' && !state.previewBytes) return;
+        if (step === 'export' && !hasCurrentFont()) return;
         state.step = step;
         $$('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
         $$('.step-tab').forEach(button => button.setAttribute('aria-current', button.dataset.step === step ? 'step' : 'false'));
@@ -980,9 +1036,13 @@
       }
 
       function startWriting() {
+        finishActiveStroke();
         const selected = updateSelectionSummary();
         if (!selected.chars.length) { AppToast.show({ message: t('noCharacters') }); return; }
+        const retained = Object.keys(state.glyphs).filter(char => state.glyphs[char].strokes?.length);
+        if (new Set([...selected.chars, ...retained]).size > MAX_CHARS) { AppToast.show({ message: t('retainedCharacterLimit'), duration: 6500 }); return; }
         const previousChar = currentChar();
+        invalidateClearUndo();
         state.chars = selected.chars;
         const existingIndex = previousChar ? state.chars.indexOf(previousChar) : -1;
         state.currentIndex = existingIndex >= 0 ? existingIndex : Math.min(state.currentIndex, state.chars.length - 1);
@@ -1013,20 +1073,38 @@
         refreshGlyphListState();
       }
       function refreshGlyphListState() {
+        const counts = { all: state.chars.length, unfinished: 0, review: 0 };
+        for (const char of state.chars) { if (!getGlyph(char, false).strokes?.length) counts.unfinished += 1; else if (state.quality[char]?.warning) counts.review += 1; }
         $$('.glyph-button[data-index]').forEach(button => {
           const index = Number(button.dataset.index);
           const char = state.chars[index];
           const done = Boolean(getGlyph(char, false).strokes?.length);
           const warning = Boolean(state.quality[char]?.warning);
+          button.hidden = state.glyphFilter === 'unfinished' ? done : state.glyphFilter === 'review' ? !(done && warning) : false;
+          if (button.hidden && document.activeElement === button) {
+            const group = $('#glyphPickerDialog').open ? $('#glyphPickerFilters') : $('#glyphFilters');
+            group.querySelector(`[data-glyph-filter="${state.glyphFilter}"]`)?.focus({ preventScroll: true });
+          }
           button.classList.toggle('current', index === state.currentIndex);
           button.classList.toggle('done', done);
           button.classList.toggle('warning', done && warning);
           button.title = `${char} · ${codeLabel(char)}${done && warning ? ` · ${t('needsReview')}` : ''}`;
           button.setAttribute('aria-current', index === state.currentIndex ? 'true' : 'false');
         });
+        $$('[data-glyph-filter]').forEach(button => button.setAttribute('aria-pressed', button.dataset.glyphFilter === state.glyphFilter ? 'true' : 'false'));
+        $$('[data-filter-count]').forEach(count => { count.textContent = formatNumber(counts[count.dataset.filterCount]); });
+        const emptyKey = state.glyphFilter === 'unfinished' ? 'filterNoneUnfinished' : (completedCount() && !hasCurrentFont() ? (state.fontStatusMode === 'error' ? 'fontStatusError' : 'filterChecking') : 'filterNoneReview');
+        [$('#glyphListEmpty'), $('#glyphPickerEmpty')].forEach(empty => { empty.hidden = counts[state.glyphFilter] > 0; empty.textContent = t(emptyKey); });
+      }
+      function setGlyphFilter(filter) {
+        if (!['all', 'unfinished', 'review'].includes(filter)) return;
+        finishActiveStroke();
+        state.glyphFilter = filter;
+        refreshGlyphListState();
       }
       function selectCharacter(index) {
         if (!Number.isInteger(index) || index < 0 || index >= state.chars.length) return;
+        finishActiveStroke();
         state.currentIndex = index;
         updateWritingUi();
         renderCanvas();
@@ -1225,13 +1303,20 @@
         activeStroke.points.push(point);
       }
       function handlePointerDown(event) {
-        if (activePointer !== null || !currentChar()) return;
+        if (activePointer !== null || !currentChar() || state.step !== 'write' || document.querySelector('dialog[open]')) return;
+        if (event.button !== undefined && event.button !== 0) return;
+        if (event.isPrimary === false) return;
+        if (state.totalPoints >= MAX_POINTS) { AppToast.show({ message: t('pointLimit'), duration: 5200 }); return; }
         activePointer = event.pointerId;
-        $('#drawCanvas').setPointerCapture(event.pointerId);
+        activeStrokeOwner = { char: currentChar(), project: projectGeneration };
         activeStroke = { points: [] };
+        invalidateClearUndo(currentChar());
+        invalidateFontOutput();
+        try { $('#drawCanvas').setPointerCapture(event.pointerId); } catch { /* capture may be unavailable */ }
         maybeAppendPoint(pointFromPointer(event));
         renderCanvas();
       }
+
       function handlePointerMove(event) {
         if (event.pointerId !== activePointer || !activeStroke) return;
         const events = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [event];
@@ -1240,26 +1325,34 @@
       }
       function finishPointer(event) {
         if (event.pointerId !== activePointer || !activeStroke) return;
-        maybeAppendPoint(pointFromPointer(event));
+        finishActiveStroke(event);
+      }
+      // Retain collected points at navigation/dialog/cancel boundaries, always on the original glyph.
+      function finishActiveStroke(event = null) {
+        if (!activeStroke) return;
+        if (event && event.type !== 'pointercancel' && event.type !== 'lostpointercapture') maybeAppendPoint(pointFromPointer(event));
         const stroke = activeStroke;
-        activePointer = null;
-        activeStroke = null;
-        try { $('#drawCanvas').releasePointerCapture(event.pointerId); } catch { /* ignore */ }
-        if (stroke.points.length) {
-          const glyph = getGlyph(currentChar());
-          glyph.strokes.push(stroke);
-          glyph.redo = [];
+        const owner = activeStrokeOwner;
+        const pointer = activePointer;
+        activePointer = null; activeStroke = null; activeStrokeOwner = null;
+        try { $('#drawCanvas').releasePointerCapture(pointer); } catch { /* ignore */ }
+        if (stroke.points.length && owner?.project === projectGeneration) {
+          const glyph = getGlyph(owner.char);
+          glyph.strokes.push(stroke); glyph.redo = [];
           state.totalPoints += stroke.points.length;
-          delete state.quality[currentChar()];
-          updateWritingUi();
-          refreshGlyphListState();
-          scheduleAutosave();
-          scheduleFontGeneration();
+          afterGlyphEdit(owner.char);
         }
         renderCanvas();
       }
+      function invalidateClearUndo(char = null) {
+        if (clearUndoToken && (char === null || clearUndoToken.char === char)) {
+          clearUndoToken = null;
+          AppToast.dismiss();
+        }
+      }
 
       function undoCurrent() {
+        finishActiveStroke();
         const glyph = getGlyph(currentChar());
         if (!glyph.strokes.length) return;
         const stroke = glyph.strokes.pop();
@@ -1267,29 +1360,47 @@
         state.totalPoints -= stroke.points.length;
         afterGlyphEdit();
       }
+
       function redoCurrent() {
+        finishActiveStroke();
         const glyph = getGlyph(currentChar());
         if (!glyph.redo.length) return;
-        const stroke = glyph.redo.pop();
-        glyph.strokes.push(stroke);
+        const stroke = glyph.redo[glyph.redo.length - 1];
+        if (state.totalPoints + stroke.points.length > MAX_POINTS) { AppToast.show({ message: t('pointLimit'), duration: 5200 }); return; }
+        glyph.redo.pop(); glyph.strokes.push(stroke);
         state.totalPoints += stroke.points.length;
         afterGlyphEdit();
       }
+
       function clearCurrent() {
+        finishActiveStroke();
         const char = currentChar();
         const glyph = getGlyph(char);
         if (!glyph.strokes.length) return;
-        const before = glyph.strokes.map(stroke => ({ points: stroke.points.map(point => ({ ...point })) }));
+        const before = glyph.strokes;
         const removedPoints = before.reduce((sum, stroke) => sum + stroke.points.length, 0);
-        glyph.strokes = [];
-        glyph.redo = [];
+        glyph.strokes = []; glyph.redo = [];
         state.totalPoints -= removedPoints;
-        afterGlyphEdit();
+        afterGlyphEdit(char);
+        const token = { char, project: projectGeneration, glyph, revision: glyphRevisions.get(char) };
+        clearUndoToken = token;
         AppToast.show({ message: t('clearedGlyph'), actionLabel: t('undoAction'), duration: 5000, onAction: () => {
-          const target = getGlyph(char); target.strokes = before; target.redo = []; state.totalPoints += removedPoints; afterGlyphEdit(); AppToast.show({ message: t('restored') });
+          if (clearUndoToken !== token || token.project !== projectGeneration || state.glyphs[char] !== glyph || glyphRevisions.get(char) !== token.revision || glyph.strokes.length) return;
+          finishActiveStroke();
+          if (clearUndoToken !== token) return;
+          if (state.totalPoints + removedPoints > MAX_POINTS) { AppToast.show({ message: t('pointLimit'), duration: 5200 }); return; }
+          glyph.strokes = before; glyph.redo = []; state.totalPoints += removedPoints;
+          afterGlyphEdit(char);
+          AppToast.show({ message: t('restored') });
         } });
       }
-      function afterGlyphEdit() { delete state.quality[currentChar()]; updateWritingUi(); refreshGlyphListState(); renderCanvas(); scheduleAutosave(); scheduleFontGeneration(); }
+
+      function afterGlyphEdit(char = currentChar()) {
+        invalidateClearUndo(char);
+        glyphRevisions.set(char, (glyphRevisions.get(char) || 0) + 1);
+        scheduleFontGeneration();
+        updateWritingUi(); renderCanvas(); scheduleAutosave();
+      }
 
       function serializeProjectPayload() {
         const serializableGlyphs = {};
@@ -1305,6 +1416,7 @@
         autosaveTimer = setTimeout(saveProject, 180);
       }
       function saveProject() {
+        clearTimeout(autosaveTimer); autosaveTimer = 0;
         const payload = serializeProjectPayload();
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1896,46 +2008,57 @@
       }
 
       function setFontStatus(mode, messageKey) {
+        state.fontStatusMode = mode; state.fontStatusKey = messageKey;
         const root = $('#fontStatus');
         root.classList.remove('ready', 'error', 'generating');
         if (mode) root.classList.add(mode);
         $('#fontStatusText').textContent = t(messageKey);
       }
-      function scheduleFontGeneration(delay = 320) {
-        clearTimeout(generationTimer);
-        generationTimer = setTimeout(() => generatePreviewFont(), delay);
+      function hasCurrentFont() { return Boolean(state.previewBytes && state.previewGeneration === state.fontGeneration); }
+      function invalidateFontOutput() {
+        clearTimeout(generationTimer); generationTimer = 0;
+        state.fontGeneration += 1;
+        state.previewBytes = null; state.previewGeneration = null; state.quality = Object.create(null);
+        if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } previewFace = null; }
+        $('#downloadButton').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true;
+        setFontStatus(completedCount() ? 'generating' : '', completedCount() ? 'fontStatusGenerating' : 'fontStatusEmpty');
+        updateCurrentQualityUi(); refreshGlyphListState(); updateExportUi();
+        return state.fontGeneration;
       }
-      async function generatePreviewFont() {
+
+      function scheduleFontGeneration(delay = 320) {
+        const generation = invalidateFontOutput();
+        generationTimer = setTimeout(() => generatePreviewFont(generation), delay);
+      }
+
+      async function generatePreviewFont(generation = invalidateFontOutput()) {
+        if (generation !== state.fontGeneration || activeStroke) return;
+        generationTimer = 0;
+        const fontName = state.fontName;
         const entries = state.chars.map(char => ({ char, glyph: getGlyph(char, false) })).filter(entry => entry.glyph.strokes?.length);
-        const generation = ++state.fontGeneration;
         if (!entries.length) {
-          state.previewBytes = null; state.quality = Object.create(null);
-          $('#downloadButton').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true;
           setFontStatus('', 'fontStatusEmpty'); updateCurrentQualityUi(); updateExportUi(); return;
         }
         setFontStatus('generating', 'fontStatusGenerating');
         await new Promise(resolve => setTimeout(resolve, 0));
+        if (generation !== state.fontGeneration || activeStroke) return;
         try {
-          const result = buildFont(state.fontName, entries);
-          if (generation !== state.fontGeneration) return;
+          const result = buildFont(fontName, entries);
           const face = new FontFace(PREVIEW_FAMILY, result.bytes.buffer.slice(result.bytes.byteOffset, result.bytes.byteOffset + result.bytes.byteLength), { style: 'normal', weight: '400' });
           await face.load();
           if (generation !== state.fontGeneration) return;
-          if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } }
           document.fonts.add(face); previewFace = face;
-          state.previewBytes = result.bytes;
           analyzeAllGlyphQuality(entries);
-          updateWritingUi();
+          state.previewBytes = result.bytes; state.previewGeneration = generation;
           $('#downloadButton').disabled = false; $('#stepTabExport').disabled = false; $('#mobileTabExport').disabled = false;
           setFontStatus('ready', 'fontStatusReady');
-          updateExportUi();
+          updateWritingUi(); updateExportUi();
         } catch (error) {
-          console.error(error);
           if (generation !== state.fontGeneration) return;
-          state.previewBytes = null;
-          $('#downloadButton').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true;
+          console.error(error);
+          invalidateFontOutput();
           setFontStatus('error', 'fontStatusError');
-          updateExportUi();
+          updateExportUi(); refreshGlyphListState();
         }
       }
 
@@ -1952,12 +2075,14 @@
         $('#remainingMetric').textContent = formatNumber(Math.max(0, state.chars.length - done));
         $('#fontSizeMetric').textContent = state.previewBytes ? formatBytes(state.previewBytes.byteLength) : '—';
         const warningChars = doneChars.filter(char => state.quality[char]?.warning);
+        const checking = done > 0 && !hasCurrentFont();
         $('#qualityMetricValue').textContent = formatNumber(warningChars.length);
         $('#qualityMetric').classList.toggle('warning', warningChars.length > 0);
         const summary = $('#qualitySummary');
         summary.classList.toggle('warning', warningChars.length > 0);
         $('#qualitySummaryTitle').textContent = warningChars.length ? t('qualitySummaryWarning', warningChars.length) : (done ? t('qualitySummaryOk') : t('qualitySummaryEmpty'));
         $('#qualitySummaryText').textContent = warningChars.length ? `${warningChars.slice(0, 12).join(' ')}${warningChars.length > 12 ? ' …' : ''}` : (done ? t('qualitySummaryOkDetail') : t('qualitySummaryEmptyDetail'));
+        if (checking) { $('#qualitySummaryTitle').textContent = t(state.fontStatusMode === 'error' ? 'fontStatusError' : 'qualityChecking'); $('#qualitySummaryText').textContent = t('backupAnytime'); }
         $('#reviewWarningsButton').hidden = warningChars.length === 0;
         $('#exportFontName').textContent = state.fontName || 'My Handwriting';
         $('#exportGlyphCount').textContent = formatNumber(done + (done ? 2 : 0));
@@ -1965,18 +2090,24 @@
         if (!review.value) review.value = state.language === 'ja' ? (doneChars.slice(0, 18).join('') || 'あいうえお') : (doneChars.slice(0, 18).join('') || 'ABC 123');
         $('#reviewFont').textContent = review.value;
       }
+      function sanitizeFilenameBase(source, maxLength = 120) {
+        let base = String(source).trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.(?:ttf|handfont\.json|json)$/i, '').replace(/\.+$/g, '').trim();
+        base = base.slice(0, maxLength).replace(/\.+$/g, '').trim() || 'handwriting-font';
+        base = base.replace(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?=\.|$)/i, '$1-font');
+        return base;
+      }
+      function syncFilenameInputs(value) {
+        $('#outputFilename').value = value;
+        $('#projectFilenameWrite').value = value;
+      }
       function normalizedFilenameBase() {
-        const fallback = 'handwriting-font';
-        const input = $('#outputFilename');
-        const cleaned = input.value.trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.+$/g, '').trim();
-        let base = cleaned.replace(/\.ttf$/i, '') || fallback;
-        if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(base)) base = `${base}-font`;
-        base = base.slice(0, 120);
-        input.value = base;
+        const base = sanitizeFilenameBase($('#outputFilename').value);
+        syncFilenameInputs(base);
         return base;
       }
       function downloadFont() {
-        if (!state.previewBytes) return;
+        finishActiveStroke();
+        if (!hasCurrentFont()) return;
         const blob = new Blob([state.previewBytes], { type: 'font/ttf' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1986,12 +2117,14 @@
       }
 
       function projectFilenameBase() {
-        const source = ($('#outputFilename')?.value || state.fontName || 'handwriting-font').trim();
-        let base = source.replace(/[\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\.(?:ttf|handfont\.json|json)$/i, '').replace(/\.+$/g, '').trim();
-        if (!base) base = 'handwriting-font';
-        return base.slice(0, 100);
+        const source = $('#projectFilenameWrite').value || state.fontName || 'handwriting-font';
+        const base = sanitizeFilenameBase(source, 100);
+        syncFilenameInputs(base);
+        return base;
       }
       function downloadProjectFile() {
+        finishActiveStroke();
+        saveProject();
         const payload = serializeProjectPayload();
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -2025,7 +2158,7 @@
         const allowed = new Set(chars);
         let totalPoints = 0;
         for (const [char, glyph] of Object.entries(rawGlyphs || {})) {
-          if (!allowed.has(char) || !Array.isArray(glyph?.strokes)) continue;
+          if (!isSupportedProjectChar(char) || !Array.isArray(glyph?.strokes)) continue;
           const cleanStrokes = [];
           for (const stroke of glyph.strokes) {
             if (!Array.isArray(stroke?.points)) continue;
@@ -2043,7 +2176,11 @@
             }
             if (points.length) cleanStrokes.push({ points });
           }
-          if (cleanStrokes.length) glyphs[char] = { strokes: cleanStrokes, redo: [] };
+          if (cleanStrokes.length) {
+            allowed.add(char);
+            if (allowed.size > MAX_CHARS) throw new Error('Project retained character limit exceeded');
+            glyphs[char] = { strokes: cleanStrokes, redo: [] };
+          }
         }
         return { glyphs, totalPoints };
       }
@@ -2057,7 +2194,7 @@
           customText: typeof saved.customText === 'string' ? saved.customText.slice(0, 1000) : '',
           selectedSets: { hiragana: Boolean(saved.selectedSets?.hiragana), katakana: Boolean(saved.selectedSets?.katakana), upper: Boolean(saved.selectedSets?.upper), lower: Boolean(saved.selectedSets?.lower), digits: Boolean(saved.selectedSets?.digits), symbols: Boolean(saved.selectedSets?.symbols) },
           chars,
-          currentIndex: Math.max(0, Math.min(Number(saved.currentIndex) || 0, chars.length - 1)),
+          currentIndex: Math.max(0, Math.min(Math.trunc(Number(saved.currentIndex) || 0), chars.length - 1)),
           penWidth: Math.max(28, Math.min(100, Number(saved.penWidth) || 56)),
           guideCharacter: saved.guideCharacter !== false,
           glyphs: normalizedGlyphs.glyphs,
@@ -2066,34 +2203,49 @@
         };
       }
       async function loadProjectFile(file) {
+        finishActiveStroke();
+        const intent = ++importGeneration;
         try {
           const parsed = JSON.parse(await file.text());
+          if (intent !== importGeneration) return;
           const imported = normalizeImportedProject(parsed);
-          const hasCurrentWriting = completedCount() > 0;
-          if (hasCurrentWriting) {
+          finishActiveStroke();
+          if (state.totalPoints > 0) {
             const ok = await AppConfirm.ask({ title: t('projectLoadConfirmTitle'), message: t('projectLoadConfirmMessage'), confirmLabel: t('projectLoadConfirm'), cancelLabel: t('cancel'), tone: 'danger' });
-            if (!ok) return;
+            if (!ok || intent !== importGeneration) return;
           }
+          replaceProjectSource();
           state.fontName = imported.fontName; state.customText = imported.customText; state.selectedSets = imported.selectedSets; state.chars = imported.chars; state.currentIndex = imported.currentIndex;
-          state.penWidth = imported.penWidth; state.guideCharacter = imported.guideCharacter; state.glyphs = imported.glyphs; state.totalPoints = imported.totalPoints; state.quality = Object.create(null); state.previewBytes = null; state.step = imported.step;
-          if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } previewFace = null; }
+          state.penWidth = imported.penWidth; state.guideCharacter = imported.guideCharacter; state.glyphs = imported.glyphs; state.totalPoints = imported.totalPoints; state.step = imported.step;
           syncSetupInputs(); updateSelectionSummary(); $('#guideCharacterToggle').checked = state.guideCharacter; rebuildGlyphLists(); updateWritingUi(); updateExportUi(); renderCanvas();
-          $('#stepTabWrite').disabled = false; $('#mobileTabWrite').disabled = false; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true; $('#downloadButton').disabled = true;
-          saveProject(); setStep(imported.step === 'setup' ? 'setup' : 'write');
-          if (completedCount()) scheduleFontGeneration(0); else setFontStatus('', 'fontStatusEmpty');
+          $('#stepTabWrite').disabled = false; $('#mobileTabWrite').disabled = false;
+          setStep(imported.step === 'setup' ? 'setup' : 'write'); saveProject();
+          scheduleFontGeneration(0);
           AppToast.show({ message: t('projectLoaded') });
         } catch (error) {
+          if (intent !== importGeneration) return;
           console.warn(error);
           AppToast.show({ message: t('projectLoadFailed'), duration: 5600 });
         } finally {
-          $('#projectFileInput').value = '';
+          if (intent === importGeneration) $('#projectFileInput').value = '';
         }
       }
-      function openProjectFilePicker() { $('#projectFileInput').click(); }
+      function replaceProjectSource() {
+        finishActiveStroke();
+        projectGeneration += 1;
+        clearTimeout(autosaveTimer); autosaveTimer = 0;
+        invalidateClearUndo(); glyphRevisions.clear(); state.glyphFilter = 'all';
+        invalidateFontOutput();
+      }
+
+      function openProjectFilePicker() { finishActiveStroke(); importGeneration += 1; $('#projectFileInput').click(); }
 
       async function resetProject() {
+        finishActiveStroke();
+        const intent = ++importGeneration;
         const ok = await AppConfirm.ask({ title: t('newProjectTitle'), message: t('newProjectMessage'), confirmLabel: t('reset'), cancelLabel: t('cancel'), tone: 'danger' });
-        if (!ok) return;
+        if (!ok || intent !== importGeneration) return;
+        replaceProjectSource();
         try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
         state.fontName = 'My Handwriting'; state.customText = ''; state.selectedSets = { hiragana: true, katakana: false, upper: false, lower: false, digits: false, symbols: false };
         state.chars = [...characterSets.hiragana]; state.currentIndex = 0; state.penWidth = 56; state.guideCharacter = true; state.glyphs = Object.create(null); state.quality = Object.create(null); state.previewBytes = null; state.totalPoints = 0; state.step = 'setup';
@@ -2105,18 +2257,20 @@
 
       function bindEvents() {
         $('#languageButton').addEventListener('click', () => { state.language = state.language === 'ja' ? 'en' : 'ja'; try { localStorage.setItem(`${STORAGE_KEY}:language`, state.language); } catch { /* ignore */ } applyLanguage(); });
-        $('#helpButton').addEventListener('click', () => $('#helpDialog').showModal());
+        $('#helpButton').addEventListener('click', () => { finishActiveStroke(); $('#helpDialog').showModal(); });
         $('#closeHelpButton').addEventListener('click', () => $('#helpDialog').close());
         $('#helpDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
-        $('#openGlyphPickerButton').addEventListener('click', () => $('#glyphPickerDialog').showModal());
+        $('#openGlyphPickerButton').addEventListener('click', () => { finishActiveStroke(); $('#glyphPickerDialog').showModal(); });
         $('#closeGlyphPickerButton').addEventListener('click', () => $('#glyphPickerDialog').close());
         $('#glyphPickerDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
         ['fontNameInput','customTextInput','setHiragana','setKatakana','setUpper','setLower','setDigits','setSymbols'].forEach(id => $(`#${id}`).addEventListener('input', updateSelectionSummary));
         $('#startWritingButton').addEventListener('click', startWriting);
+        $$('[data-glyph-filter]').forEach(button => button.addEventListener('click', () => setGlyphFilter(button.dataset.glyphFilter)));
         $('#newProjectButton').addEventListener('click', resetProject);
         $('#loadProjectButtonTop').addEventListener('click', openProjectFilePicker);
         $('#loadProjectButtonExport').addEventListener('click', openProjectFilePicker);
         $('#saveProjectFileButton').addEventListener('click', downloadProjectFile);
+        $('#saveProjectFileButtonWrite').addEventListener('click', downloadProjectFile);
         $('#projectFileInput').addEventListener('change', event => { const file = event.target.files?.[0]; if (file) loadProjectFile(file); });
         $('#backToSetupButton').addEventListener('click', () => setStep('setup'));
         $('#backToWriteButton').addEventListener('click', () => setStep('write'));
@@ -2128,7 +2282,7 @@
         $('#undoButton').addEventListener('click', undoCurrent);
         $('#redoButton').addEventListener('click', redoCurrent);
         $('#clearGlyphButton').addEventListener('click', clearCurrent);
-        $('#penWidthInput').addEventListener('input', event => { state.penWidth = Number(event.target.value); $('#penWidthValue').textContent = String(state.penWidth); state.quality = Object.create(null); scheduleAutosave(); renderCanvas(); scheduleFontGeneration(); updateCurrentQualityUi(); });
+        $('#penWidthInput').addEventListener('input', event => { finishActiveStroke(); state.penWidth = Number(event.target.value); $('#penWidthValue').textContent = String(state.penWidth); state.quality = Object.create(null); scheduleAutosave(); renderCanvas(); scheduleFontGeneration(); updateCurrentQualityUi(); });
         $('#guideCharacterToggle').addEventListener('change', event => { state.guideCharacter = Boolean(event.target.checked); scheduleAutosave(); renderCanvas(); });
         $('#reviewWarningsButton').addEventListener('click', () => { const index = state.chars.findIndex(char => state.quality[char]?.warning); if (index >= 0) { state.currentIndex = index; updateWritingUi(); setStep('write'); renderCanvas(); } });
         const canvas = $('#drawCanvas');
@@ -2136,18 +2290,26 @@
         canvas.addEventListener('pointermove', handlePointerMove);
         canvas.addEventListener('pointerup', finishPointer);
         canvas.addEventListener('pointercancel', finishPointer);
+        canvas.addEventListener('lostpointercapture', finishPointer);
         canvas.addEventListener('contextmenu', event => event.preventDefault());
         window.addEventListener('resize', () => { if (state.step === 'write') { resizeCanvas(); renderCanvas(); } });
         document.addEventListener('keydown', event => {
-          if (state.step !== 'write' || event.target.matches('input, textarea')) return;
+          if (state.step !== 'write' || event.isComposing || event.keyCode === 229 || document.querySelector('dialog[open]') || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
           if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redoCurrent() : undoCurrent(); }
           if (event.key === 'ArrowLeft' && !event.ctrlKey && !event.metaKey) { event.preventDefault(); selectCharacter(state.currentIndex - 1); }
           if (event.key === 'ArrowRight' && !event.ctrlKey && !event.metaKey) { event.preventDefault(); selectCharacter(state.currentIndex + 1); }
         });
+        window.addEventListener('pagehide', flushProject);
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushProject(); });
         $('#reviewText').addEventListener('input', event => { $('#reviewFont').textContent = event.target.value; });
+        $('#outputFilename').addEventListener('input', event => syncFilenameInputs(event.target.value));
+        $('#projectFilenameWrite').addEventListener('input', event => syncFilenameInputs(event.target.value));
         $('#outputFilename').addEventListener('blur', normalizedFilenameBase);
+        $('#projectFilenameWrite').addEventListener('blur', () => { syncFilenameInputs(sanitizeFilenameBase($('#projectFilenameWrite').value, 100)); });
         $('#downloadButton').addEventListener('click', downloadFont);
       }
+
+      function flushProject() { finishActiveStroke(); saveProject(); }
 
       function initialize() {
         $('#versionBadge').textContent = `v${APP_CONFIG.version}`;
@@ -2186,3 +2348,4 @@
   </script>
 </body>
 </html>
+
