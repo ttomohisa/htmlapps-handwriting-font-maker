@@ -23,7 +23,7 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 - Select hiragana, katakana, uppercase/lowercase Latin, digits, and common symbols
 - Extract only the unique characters needed from custom text
 - Draw one character at a time with mouse, touch, or pen
-- Stroke-level Undo / Redo
+- Stroke-level Undo / Redo, with safe Clear undo and the project point limit enforced on restoration
 - Adjustable pen width
 - Toggleable faint guide character, with the preference included in local autosave
 - Keep handwriting in normalized 1000×1000 vector coordinates
@@ -31,9 +31,11 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 - Load the generated TTF through `FontFace` for a real-font preview
 - Edit the font name and output filename before saving
 - Autosave the current project in browser storage
-- Explicitly save / load editable `.handfont.json` project data
+- Save an editable `.handfont.json` backup directly from the writing screen with an editable filename, even while font generation is pending or has failed; load it later to continue
+- Keep existing drawings when you remove characters from the active selection; reselect those characters to continue editing them
 - Show completed count and percentage in a writing progress bar
 - Jump directly to unfinished or review glyphs when needed
+- Filter the character list by All / Unfinished / Review, with one shared selection across desktop and the mobile character drawer
 - Japanese / English UI
 - Responsive desktop and smartphone layouts
 - Build readable and self-extracting single-HTML distributions
@@ -44,11 +46,13 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 2. Select character sets, or paste text into the custom-character field.
 3. Press **Start writing**.
 4. Draw the current character while using the faint guide character if helpful. The guide can be turned on or off.
-5. Move through characters with Previous / Next or the character list. The progress bar shows completion, and the unfinished shortcut appears when it can skip back to a missed glyph.
+5. Move through characters with Previous / Next or the character list. Use **All / Unfinished / Review** to focus the list without changing the project's characters or their order. Desktop and mobile share the same filter; it is not saved in project files or autosave. The progress bar still counts the whole project.
 6. Check the real generated font in the preview. Each row is marked **OK**, **Reference** (12px only), or **Review** after the generated TTF is analyzed. A 12px-only detail loss does not count as a project warning.
 7. At the last character, the main action returns to unfinished work if any remains; otherwise it becomes **Review & save**. Confirm the filename and press **Save TTF**.
 
-Download is enabled only after at least one character has been drawn and the generated TTF has successfully loaded in the browser.
+Use **Save editable project** in the writing screen whenever you want a portable backup. Edit the backup filename beside the button; it shares the basename used for TTF output and adds `.handfont.json`. Saving does not wait for a TTF preview. Backups and autosave retain drawings for characters removed from the current selection, so reselecting them restores your work. TTF output includes only the current selection. Load the backup from the character-selection screen to resume, including on another device. Browser autosave is convenient, but clearing browser data or changing browsers may lose it.
+
+TTF download is enabled only after at least one character has been drawn and the font for the current handwriting, pen width, and font name has successfully loaded. Editing invalidates the previous TTF immediately; an older asynchronous result cannot become downloadable after a later edit or project replacement.
 
 ## Preserving handwriting detail
 
@@ -77,7 +81,7 @@ Forced Boolean union and aggressive simplification are still avoided. Any future
 - No contextual alternate/random glyph variants.
 - No scanned template or image import.
 - Characters above Unicode U+FFFF are not supported yet.
-- Maximum 180 drawable characters per project.
+- Maximum 180 unique characters across the active selection and retained off-list drawings, with 80,000 stored points in total. A selection change that would exceed the combined character limit is rejected instead of deleting handwriting.
 - Boolean outline union and aggressive Bezier optimization are intentionally deferred.
 
 ## Privacy
@@ -103,7 +107,7 @@ Firefox and Safari/iOS Safari may differ because of browser API implementation d
 
 ## Development
 
-Edit `src/index.template.html`. Files under `dist/` are generated output and should not be edited directly.
+Edit `src/index.template.html`. Files under `dist/` and the root `handwriting-font-maker.html` download alias are generated output and should not be edited directly.
 
 ### Build on Windows
 
@@ -123,7 +127,17 @@ dist/
 └─ .nojekyll
 ```
 
-`dist/index.html` is designed to open directly through `file://`.
+Normal builds also update `handwriting-font-maker.html` to match `dist/index.html` byte-for-byte. Both readable files are designed to open directly through `file://`. A custom `-OutputPath` build leaves the normal download alias unchanged.
+
+### Repository checks
+
+With PowerShell and Node.js 20 or newer installed, run:
+
+```powershell
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-repository.ps1
+```
+
+This builds and verifies both release variants, runs the dependency-free handwriting and packaging regression suites, and checks exact root-download parity. The existing CI workflows run the same checks. To check already-built readable files without rebuilding or repairing them, run `node scripts/test-packaging.cjs --verify-output`; a stale or missing root alias fails.
 
 ### Dependencies
 

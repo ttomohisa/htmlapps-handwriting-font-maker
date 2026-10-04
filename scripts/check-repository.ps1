@@ -36,6 +36,8 @@ $required = @(
   "scripts\update-dependency.ps1",
   "scripts\verify-standalone.ps1",
   "scripts\verify-self-extract.ps1",
+  "scripts\test-handwriting.cjs",
+  "scripts\test-packaging.cjs",
   "README.md",
   "README.ja.md",
   "LICENSE",
@@ -225,7 +227,17 @@ $buildArguments = @{}
 if ($ForceDownload) { $buildArguments.ForceDownload = $true }
 & (Join-Path $Root "build-standalone.ps1") @buildArguments
 
-Write-Host "[OK] Repository check passed." -ForegroundColor Green
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+  throw "Node.js 20 or newer is required for the dependency-free repository regression tests."
+}
+foreach ($relative in @("src\index.template.html", "dist\index.html", "dist\index.self-extract.html")) {
+  & node (Join-Path $Root "scripts\test-handwriting.cjs") --html (Join-Path $Root $relative)
+  if ($LASTEXITCODE -ne 0) { throw "Handwriting behavior regression tests failed: $relative" }
+}
+& node (Join-Path $Root "scripts\test-packaging.cjs") --powershell ((Get-Process -Id $PID).Path)
+if ($LASTEXITCODE -ne 0) { throw "Release packaging regression tests failed." }
+& node (Join-Path $Root "scripts\test-packaging.cjs") --verify-output
+if ($LASTEXITCODE -ne 0) { throw "Readable download alias verification failed." }
 
 # WebRTC readiness DataChannel regression
 $webrtcReadyText = Get-Content -Raw -Encoding UTF8 (Join-Path $Root "components\webrtc-qr-pairing.html")
@@ -242,3 +254,4 @@ if (-not $webrtcReadyText.Contains("options.requireReadyChannelOpen!==false&&(!r
   throw "WebRTC application-ready must wait for the designated DataChannel to open."
 }
 
+Write-Host "[OK] Repository check passed." -ForegroundColor Green

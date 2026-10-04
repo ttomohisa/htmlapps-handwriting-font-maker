@@ -434,6 +434,14 @@ if ($appConfig.build.PSObject.Properties.Name -contains "sizeBudget" -and $appCo
   }
 }
 
+# Keep the repository's convenient readable download identical to the verified release.
+# Custom-output builds must not replace the normal release alias.
+if (-not $OutputPathWasSpecified) {
+  $readableAliasPath = Join-Path $Root "handwriting-font-maker.html"
+  Copy-Item -LiteralPath $OutputPath -Destination $readableAliasPath -Force
+  Write-Host "[OK] Readable download alias: $readableAliasPath"
+}
+
 $outputHash = Get-Sha256FileHex $OutputPath
 $outputSizeMb = [Math]::Round($readableBytes / 1MB, 2)
 Write-Host ""

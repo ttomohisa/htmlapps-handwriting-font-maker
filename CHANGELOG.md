@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Save editable project directly from the writing screen with an editable filename, including while TTF generation is pending or has failed, using the existing `.handfont.json` schema.
+- Shared All / Unfinished / Review character-list filters for desktop and the mobile drawer, with localized empty results and unchanged project/navigation order.
+- Dependency-free Node.js handwriting and packaging regressions in the full repository checks used by CI.
+
+### Fixed
+
+- Scope Clear Undo and active pointer strokes to their original project/glyph revisions so newer writing cannot be overwritten or assigned to another character.
+- Enforce the project-wide point cap before Redo or Clear Undo restores points.
+- Preserve off-list handwriting through selection changes, project backup/import, and autosave restore. Enforce combined active/stored character and point limits without silently discarding drawings, and include hidden or active handwriting in project-replacement confirmation.
+- Invalidate old TTF export state immediately on font-affecting edits and project replacement; reject delayed obsolete FontFace results and regenerate after a font-name change.
+- Automatically synchronize the root `handwriting-font-maker.html` download with verified `dist/index.html` output on normal builds. Add exact-byte verification that fails on stale or missing aliases while preserving custom-output isolation.
+
 ## [1.0.0] - 2026-09-06
 
 ### Changed
