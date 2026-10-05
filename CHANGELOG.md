@@ -6,11 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- An error-only Retry font preview action that preserves handwriting and editing state, prevents duplicate attempts, and keeps editable backup available.
+
 - Save editable project directly from the writing screen with an editable filename, including while TTF generation is pending or has failed, using the existing `.handfont.json` schema.
 - Shared All / Unfinished / Review character-list filters for desktop and the mobile drawer, with localized empty results and unchanged project/navigation order.
 - Dependency-free Node.js handwriting and packaging regressions in the full repository checks used by CI.
 
 ### Fixed
+
+- Failed font generation now marks glyph and size checks as unavailable instead of leaving them at Checking. Recovery guidance offers retry or backup rather than asking users to rewrite their strokes.
 
 - Scope Clear Undo and active pointer strokes to their original project/glyph revisions so newer writing cannot be overwritten or assigned to another character.
 - Enforce the project-wide point cap before Redo or Clear Undo restores points.

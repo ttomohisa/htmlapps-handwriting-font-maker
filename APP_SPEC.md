@@ -80,6 +80,8 @@ v1.0.0 is the first formal release. It keeps the dependency-free conversion core
 - Generate `.notdef` and space automatically.
 - Build a fresh TTF after a completed stroke or character edit with a short debounce.
 - Font-name and pen-width changes also invalidate the old TTF immediately and schedule regeneration. Only a generation matching the current project revision may install preview bytes, FontFace, quality results, or export-ready state.
+- After a generation failure, offer a localized Retry font preview button next to the preview status when any active character has strokes. Use the existing immediate generation scheduler and synchronously enter the generating state to prevent repeated queued activations; do not retry automatically. Hide and disable the button in all other states, including projects with off-list handwriting only. If the focused retry button disappears, move focus to the adjacent status without stealing focus from other controls.
+- Failed generation shows a neutral Glyph check unavailable card and Not checked badges for all four sizes on drawn characters. Empty characters still hide the card and use dashes. Generation failure is not a quality warning; suggest retry or editable backup without asking users to redraw. Pending and successful quality behavior remain unchanged.
 - Load the generated binary via the `FontFace` API. The preview must show the actual generated font, not a canvas imitation.
 - Check the loaded font at 12 / 16 / 24 / 48px. Use 48px as the reference topology; 16 / 24px report Review when separate rendered components merge or enclosed spaces disappear. A conservative inter-stroke clearance check may additionally flag 16px. The 12px row is advisory-only and never creates an overall warning by itself.
 
@@ -165,7 +167,7 @@ v1.0.0 is the first formal release. It keeps the dependency-free conversion core
 - `writing-ready`: current glyph has strokes and preview generation is idle.
 - `generating`: building and loading TTF preview.
 - `font-ready`: generated font is loaded.
-- `font-error`: generation or FontFace load failed; download disabled.
+- `font-error`: generation or FontFace load failed; download disabled, glyph/size checks unavailable, and manual retry available when active handwriting exists.
 - `export-ready`: save step with a valid generated TTF.
 
 Async font generations use a monotonically increasing generation id invalidated at the edit or project-replacement boundary, before the debounce. A slower prior build must never replace a newer edit, reset, or imported project. Export readiness belongs only to the current revision; editable-project backup is available independently of these font states.
@@ -189,6 +191,7 @@ Async font generations use a monotonically increasing generation id invalidated 
 - At least the regression characters `あ`, `の`, `8`, and `B` can be generated, loaded with FontFace, previewed, and exported into one TTF. Simple strokes use continuous contours; self-intersecting cases fall back without invalidating the font.
 - The preview rows show OK / Reference / Review after font generation. 12px can only be Reference; the warning summary names only 16 / 24px sizes that genuinely need review.
 - The output filename is editable and sanitized.
+- A failed preview can be retried without changing strokes, Undo/Redo, filters, selection, filenames, or schema-v1 backups. Repeated clicks schedule only one generation, and stale retry success/failure after a later edit or project replacement cannot change the current result. Retry remains available after another failure without any automatic loop.
 - TTF download is disabled immediately after any font-affecting edit and stays disabled until the current generation succeeds.
 - A late FontFace success after a newer edit, New project, or project import cannot restore stale preview or download state.
 - Renaming the font regenerates its TTF; the downloaded font's name table matches the current font name.

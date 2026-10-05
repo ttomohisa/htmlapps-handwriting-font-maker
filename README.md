@@ -29,6 +29,7 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 - Keep handwriting in normalized 1000×1000 vector coordinates
 - Generate TrueType outlines without rasterization, thresholding, or image contour tracing
 - Load the generated TTF through `FontFace` for a real-font preview
+- Retry a failed font preview without changing your strokes; unavailable size checks are clearly marked
 - Edit the font name and output filename before saving
 - Autosave the current project in browser storage
 - Save an editable `.handfont.json` backup directly from the writing screen with an editable filename, even while font generation is pending or has failed; load it later to continue
@@ -51,6 +52,8 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 7. At the last character, the main action returns to unfinished work if any remains; otherwise it becomes **Review & save**. Confirm the filename and press **Save TTF**.
 
 Use **Save editable project** in the writing screen whenever you want a portable backup. Edit the backup filename beside the button; it shares the basename used for TTF output and adds `.handfont.json`. Saving does not wait for a TTF preview. Backups and autosave retain drawings for characters removed from the current selection, so reselecting them restores your work. TTF output includes only the current selection. Load the backup from the character-selection screen to resume, including on another device. Browser autosave is convenient, but clearing browser data or changing browsers may lose it.
+
+If font generation fails, press **Retry font preview** beside the preview status. The action appears only after an error when the active selection contains handwriting, including when the currently selected character is empty. A failed preview shows **Glyph check unavailable** and **Not checked** at every size; it is not a handwriting-quality warning. Retrying keeps your drawings and editing state, and **Save editable project** remains available. There is no automatic retry.
 
 TTF download is enabled only after at least one character has been drawn and the font for the current handwriting, pen width, and font name has successfully loaded. Editing invalidates the previous TTF immediately; an older asynchronous result cannot become downloadable after a later edit or project replacement.
 
