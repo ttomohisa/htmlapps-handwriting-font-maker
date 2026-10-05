@@ -62,6 +62,8 @@ The starter includes the canonical confirmation and toast APIs in the default so
 - Font-affecting edits invalidate the previous generation and downloadable bytes immediately, before debounced rebuilding. The eventual FontFace result may become current only if its generation still matches the active project revision. Project replacement invalidates all outstanding font work.
 - TTF readiness and editable-project backup are separate concerns. A writing-step backup serializes the existing schema directly and remains available while FontFace generation is pending or failed. Its visible filename input shares the existing output basename and sanitizer, with `.handfont.json` appended for project downloads. Replacement confirmation considers all stored handwriting and active input, including off-list glyphs. Review filtering reuses the existing geometry and quality algorithms; none of these workflow changes alter stroke outlines or quality thresholds.
 
+- Failed preview recovery is a presentation/scheduling concern: the error-only action delegates to `scheduleFontGeneration(0)`, and its synchronous invalidation immediately removes retry availability. Failure explicitly refreshes current-glyph quality UI; an absent result in the error phase is unavailable, not still checking. Neither retry nor unavailable status changes geometry, quality thresholds, or persistent project data.
+
 ## Dependency maintenance lifecycle
 
 The runtime build stays deterministic while release discovery remains separate from source changes:

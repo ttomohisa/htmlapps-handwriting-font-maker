@@ -256,4 +256,182 @@ test('Reload preserves hidden handwriting while generated font includes only sel
 
 for(const [typed,expected] of [['folder\\draft','folder-draft'],['folder/draft','folder-draft'],['my-font.handfont.json','my-font'],['my-font.ttf','my-font']])test(`Writing filename sanitizes ${JSON.stringify(typed)} consistently for backup`,async()=>{const h=setup(harness());const input=h.$('#projectFilenameWrite');input.value=typed;input.dispatch('input');h.$('#saveProjectFileButtonWrite').click();assert.equal(h.downloads[0].name,`${expected}.handfont.json`);assert.equal(input.value,expected);assert.equal(h.$('#outputFilename').value,expected);const saved=JSON.parse(await h.downloads[0].blob.text());assert.equal(saved.schemaVersion,1);assert.equal(saved.filename,undefined);});
 for(const reserved of ['CON','CON.txt'])test(`Writing backup makes reserved Windows stem ${reserved} safe`,()=>{const h=setup(harness());h.$('#projectFilenameWrite').value=reserved;h.$('#projectFilenameWrite').dispatch('input');h.$('#saveProjectFileButtonWrite').click();assert.equal(h.downloads.length,1);const name=h.downloads[0].name;assert.ok(name.endsWith('.handfont.json'));assert.doesNotMatch(name,/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i);assert.equal(h.$('#outputFilename').value,h.$('#projectFilenameWrite').value);});
+// Recovery changes presentation and scheduling only, not the project or font algorithms.
+async function failFontPreview(h) {
+  const task = h.run('generatePreviewFont');
+  await h.advance(0);
+  h.faces.at(-1).reject();
+  await task;
+  assert.equal(h.state.fontStatusMode, 'error');
+}
+function captureProject(h) {
+  const { savedAt, ...payload } = h.run('serializeProjectPayload'); // Export time is not editing state.
+  return JSON.stringify({ payload, glyphs: h.state.glyphs, totalPoints: h.state.totalPoints, filter: h.state.glyphFilter, filename: h.$('#outputFilename').value });
+}
+for (const language of ['en', 'ja']) {
+  test(`${language}: failed preview shows unavailable quality and four not-checked badges`, async () => {
+    const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] } });
+    h.state.language = language; h.run('applyLanguage');
+    const before = captureProject(h);
+    await failFontPreview(h);
+    assert.equal(h.$('#qualityResultTitle').textContent, language === 'en' ? 'Glyph check unavailable' : '字形を確認できません');
+    assert.equal(h.$('#qualityResult').classList.contains('unavailable'), true);
+    assert.equal(h.$('#qualityResult').classList.contains('warning'), false);
+    assert.match(h.$('#fontStatusText').textContent, language === 'en' ? /retry|backup/i : /再試行|保存/);
+    assert.doesNotMatch(h.$('#fontStatusText').textContent, /rewrit|書き直/i);
+    for (const size of [12, 16, 24, 48]) {
+      const badge = h.$('#previewStatus' + size), label = language === 'en' ? 'Not checked' : '未確認';
+      assert.equal(badge.textContent, label);
+      assert.equal(badge.getAttribute('aria-label'), `${size}px ${label}`);
+      for (const tone of ['ok', 'advisory', 'warning']) assert.equal(badge.classList.contains(tone), false);
+    }
+    assertInvalid(h); assert.deepEqual(Object.keys(h.state.quality), []);
+    assert.equal(h.$('#qualityMetric').classList.contains('warning'), false);
+    h.$('#saveProjectFileButtonWrite').click();
+    const backup = JSON.parse(await h.downloads.at(-1).blob.text());
+    assert.equal(backup.schemaVersion, 1); assert.deepEqual(backup.glyphs.A.strokes, clone(h.state.glyphs.A.strokes));
+    assert.equal(captureProject(h), before);
+    h.run('selectCharacter', 1);
+    assert.equal(h.$('#qualityResult').hidden, true);
+    assert.ok([12, 16, 24, 48].every(size => h.$('#previewStatus' + size).textContent === '—'));
+    assert.equal(h.$('#retryFontButton').hidden, false, 'Retry is project-wide even on an empty current glyph');
+    h.run('selectCharacter', 0);
+    assert.equal(h.$('#qualityResultTitle').textContent, language === 'en' ? 'Glyph check unavailable' : '字形を確認できません');
+    h.$('#languageButton').click();
+    assert.equal(h.$('#retryFontButton').textContent, language === 'en' ? 'フォント表示を再試行' : 'Retry font preview');
+    assert.equal(h.$('#qualityResultTitle').textContent, language === 'en' ? '字形を確認できません' : 'Glyph check unavailable');
+  });
+  test(`${language}: retry preserves all work, synchronously blocks repeats, and recovers real TTF`, async () => {
+    const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [stroke(2)] }, C: { strokes: [stroke(4)], redo: [] } });
+    h.state.language = language; h.run('applyLanguage');
+    h.$('#projectFilenameWrite').value = 'my-retry-font'; h.$('#projectFilenameWrite').dispatch('input');
+    setFilter(h, 'review');
+    await failFontPreview(h);
+    const before = captureProject(h), generation = h.state.fontGeneration, faces = h.faces.length;
+    const button = h.$('#retryFontButton');
+    assert.equal(button.hidden, false); assert.equal(button.disabled, false);
+    assert.equal(button.textContent, language === 'en' ? 'Retry font preview' : 'フォント表示を再試行');
+    button.focus(); button.click();
+    assert.equal(h.state.fontStatusMode, 'generating'); assert.equal(h.state.fontGeneration, generation + 1);
+    assert.equal(button.hidden, true); assert.equal(button.disabled, true);
+    assert.equal(h.document.activeElement, h.$('#fontStatus'));
+    assert.equal(h.$('#fontStatus').getAttribute('tabindex'), '-1');
+    button.dispatch('click'); button.dispatch('click');
+    assert.equal(h.state.fontGeneration, generation + 1, 'Handler guard also prevents queued repeated activation');
+    assert.equal(h.$('#qualityResultTitle').textContent, h.run('t', 'qualityChecking'));
+    assert.equal(h.$('#qualityResult').classList.contains('unavailable'), false);
+    assert.ok([12, 16, 24, 48].every(size => h.$('#previewStatus' + size).textContent === h.run('t', 'sizeChecking')));
+    assertInvalid(h); assert.equal(captureProject(h), before);
+    await h.advance(0); assert.equal(h.faces.length, faces + 1);
+    h.faces.at(-1).resolve(); await tick();
+    assert.equal(h.state.fontStatusMode, 'ready'); assert.equal(button.hidden, true);
+    assert.equal(h.$('#downloadButton').disabled, false);
+    const parsed = parseTtf(h.state.previewBytes);
+    assert.ok(parsed.glyphId('A') > 1); assert.equal(parsed.glyphId('B'), 0); assert.equal(parsed.glyphId('C'), 0);
+    assert.equal(parsed.buffer.readUInt16BE(parsed.tables.get('head').offset + 18), 2048);
+    assert.ok(familyNames(h.state.previewBytes).includes('Old Family'));
+    assert.equal(captureProject(h), before);
+    h.$('#downloadButton').click(); assert.equal(h.downloads.at(-1).name, 'my-retry-font.ttf');
+    parseTtf(new Uint8Array(await h.downloads.at(-1).blob.arrayBuffer()));
+  });
+}
+test('Retry stays unavailable for initial, empty, pending and successful states, including off-list-only handwriting', async () => {
+  const h = setup(harness(), ['B'], { A: { strokes: [stroke(3)], redo: [] } });
+  const button = h.$('#retryFontButton');
+  assert.equal(button.hidden, true); assert.equal(button.disabled, true);
+  button.dispatch('click'); await h.advance(1000); assert.equal(h.faces.length, 0);
+  h.run('setFontStatus', 'error', 'fontStatusError');
+  assert.equal(button.hidden, true); button.dispatch('click'); await h.advance(1000); assert.equal(h.faces.length, 0);
+  h.draw(); assert.equal(button.hidden, true); button.dispatch('click');
+  await h.advance(400); assert.equal(h.faces.length, 1);
+  h.faces[0].resolve(); await tick(); assert.equal(h.state.fontStatusMode, 'ready');
+  assert.equal(button.hidden, true); button.dispatch('click'); await h.advance(1000); assert.equal(h.faces.length, 1);
+});
+test('A second retry failure returns a usable action without automatic retries or stealing focus', async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.$('#projectFilenameWrite').focus(); h.$('#retryFontButton').click();
+  assert.equal(h.document.activeElement, h.$('#projectFilenameWrite'));
+  await h.advance(0); h.faces.at(-1).reject(); await tick();
+  assert.equal(h.state.fontStatusMode, 'error'); assert.equal(h.$('#retryFontButton').hidden, false);
+  assert.equal(h.document.activeElement, h.$('#projectFilenameWrite'));
+  const faces = h.faces.length; await h.advance(10000); assert.equal(h.faces.length, faces);
+  assertInvalid(h); assert.equal(h.$('#qualityResult').classList.contains('unavailable'), true);
+});
+for (const result of ['resolve', 'reject']) test(`A ${result} from a superseded retry cannot replace a newer font`, async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.$('#retryFontButton').click(); await h.advance(0); const older = h.faces.at(-1);
+  h.$('#fontNameInput').value = 'Newest Family'; h.$('#fontNameInput').dispatch('input');
+  await h.advance(400); h.faces.at(-1).resolve(); await tick(); const bytes = h.state.previewBytes;
+  older[result](); await tick(); assert.equal(h.state.previewBytes, bytes); assert.equal(h.state.fontStatusMode, 'ready');
+  assert.equal(h.$('#retryFontButton').hidden, true); parseTtf(bytes); assert.ok(familyNames(bytes).includes('Newest Family'));
+});
+test('Reset during retry keeps late success unavailable and hides retry', async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.$('#retryFontButton').click(); await h.advance(0); const older = h.faces.at(-1);
+  await h.confirm(h.run('resetProject')); older.resolve(); await tick();
+  assert.equal(h.$('#retryFontButton').hidden, true); assert.equal(h.state.totalPoints, 0); assertInvalid(h);
+});
+
+test('Retry from an empty current glyph regenerates the drawn active glyph without moving selection', async () => {
+  const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.run('selectCharacter', 1);
+  const before = captureProject(h); h.$('#retryFontButton').click(); await h.advance(0);
+  h.faces.at(-1).resolve(); await tick();
+  assert.equal(h.state.currentIndex, 1); assert.equal(h.$('#qualityResult').hidden, true);
+  assert.ok([12, 16, 24, 48].every(size => h.$('#previewStatus' + size).textContent === '—'));
+  assert.equal(captureProject(h), before); assert.equal(h.state.fontStatusMode, 'ready');
+  const parsed = parseTtf(h.state.previewBytes); assert.ok(parsed.glyphId('A') > 1); assert.equal(parsed.glyphId('B'), 0);
+});
+test('Retry preserves a pending Clear Undo operation on another active glyph', async () => {
+  const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] }, B: { strokes: [stroke(2)], redo: [] } });
+  const original = clone(h.state.glyphs.A.strokes); h.run('clearCurrent');
+  await failFontPreview(h); h.$('#retryFontButton').click(); await h.advance(0);
+  h.faces.at(-1).resolve(); await tick(); h.$('#appToastAction').click();
+  assert.deepEqual(clone(h.state.glyphs.A.strokes), original); assertCounter(h); assertInvalid(h);
+});
+for (const result of ['resolve', 'reject']) test(`A late retry ${result} cannot change an imported replacement project`, async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.$('#retryFontButton').click(); await h.advance(0); const older = h.faces.at(-1);
+  await h.confirm(h.run('loadProjectFile', file(payload('Replacement', ['C'], { C: { strokes: [stroke(2)] } }))));
+  await h.advance(0); h.faces.at(-1).resolve(); await tick(); const bytes = h.state.previewBytes;
+  older[result](); await tick(); assert.equal(h.state.previewBytes, bytes); assert.equal(h.state.fontStatusMode, 'ready');
+  assert.equal(h.$('#retryFontButton').hidden, true); const parsed = parseTtf(bytes);
+  assert.equal(parsed.glyphId('A'), 0); assert.ok(parsed.glyphId('C') > 1); assert.ok(familyNames(bytes).includes('Replacement'));
+});
+
+for (const stage of ['build', 'constructor', 'analysis']) test(`Retry recovers from an injected ${stage} failure without changing project data`, async () => {
+  const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [stroke(2)] } });
+  const before = captureProject(h), functionName = stage === 'build' ? 'buildFont' : 'analyzeAllGlyphQuality';
+  const original = stage === 'constructor' ? h.context.FontFace : h.read(functionName);
+  // Inject only the fault boundary; successful retry uses the real generator and analysis.
+  if (stage === 'constructor') h.context.FontFace = class { constructor() { throw new Error('Injected constructor failure'); } };
+  else h.read(`${functionName} = () => { throw new Error('Injected failure'); }`);
+  const pending = h.run('generatePreviewFont'); await h.advance(0);
+  if (stage === 'analysis') h.faces.at(-1).resolve();
+  await pending;
+  assert.equal(h.state.fontStatusMode, 'error'); assert.equal(h.$('#retryFontButton').hidden, false);
+  assert.equal(h.$('#qualityResultTitle').textContent, 'Glyph check unavailable');
+  assert.equal(captureProject(h), before); assertInvalid(h); assert.equal(h.document.fonts.size, 0);
+  if (stage === 'constructor') h.context.FontFace = original;
+  else { h.context.__original = original; h.read(`${functionName} = globalThis.__original`); }
+  h.$('#retryFontButton').click(); await h.advance(0); h.faces.at(-1).resolve(); await tick();
+  assert.equal(h.state.fontStatusMode, 'ready'); assert.equal(captureProject(h), before); parseTtf(h.state.previewBytes);
+});
+for (const result of ['resolve', 'reject']) test(`A retry ${result} during active drawing stays stale`, async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.$('#retryFontButton').click(); await h.advance(0); const old = h.faces.at(-1);
+  h.pointer('pointerdown'); h.pointer('pointermove', { clientX: 400 }); old[result](); await tick();
+  assertInvalid(h); assert.equal(h.$('#retryFontButton').hidden, true);
+  h.pointer('pointercancel'); await h.advance(400); h.faces.at(-1).resolve(); await tick();
+  assert.equal(h.state.fontStatusMode, 'ready'); assert.equal(h.state.glyphs.A.strokes.length, 2); assertCounter(h);
+});
+test('Clear before retry starts cancels it and Clear Undo recovers the font', async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await failFontPreview(h); h.$('#retryFontButton').click(); h.run('clearCurrent'); await h.advance(400);
+  assert.equal(h.$('#retryFontButton').hidden, true); assert.equal(h.$('#qualityResult').hidden, true);
+  assertInvalid(h); assert.equal(h.faces.length, 1);
+  h.$('#appToastAction').click(); await h.advance(400); h.faces.at(-1).resolve(); await tick();
+  assert.equal(h.state.fontStatusMode, 'ready'); assert.equal(h.state.totalPoints, 3); parseTtf(h.state.previewBytes);
+});
+
 (async () => { let failed = 0; for (const item of cases) { try { let deadline; try { await Promise.race([item.fn(), new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('Test did not settle (unanswered async state boundary)')), 4000); })]); } finally { clearTimeout(deadline); } console.log(`ok - ${item.name}`); } catch (error) { failed++; console.error(`not ok - ${item.name}\n  ${String(error.stack).slice(0, 3000)}`); } } console.log(`\n${cases.length - failed}/${cases.length} passed (${path.relative(process.cwd(), htmlPath)}). VM logic and binary checks only; browser/device QA is separate.`); process.exitCode = failed ? 1 : 0; })();
