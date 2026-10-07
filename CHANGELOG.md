@@ -22,6 +22,14 @@ All notable changes to this project will be documented in this file.
 - Invalidate old TTF export state immediately on font-affecting edits and project replacement; reject delayed obsolete FontFace results and regenerate after a font-name change.
 - Automatically synchronize the root `handwriting-font-maker.html` download with verified `dist/index.html` output on normal builds. Add exact-byte verification that fails on stale or missing aliases while preserving custom-output isolation.
 
+## [1.0.1] - 2026-10-07
+
+### Fixed
+
+- Standardize header target-language labels as EN / JA and localize the language tooltip and accessible name; retain localized Help controls.
+- Keep the Japanese privacy badge consistent as 完全ローカル処理 and document the language controls in Help.
+- Add header runtime regressions for both languages, repeated switching, stored preference restoration, and unchanged application data.
+
 ## [1.0.0] - 2026-09-06
 
 ### Changed

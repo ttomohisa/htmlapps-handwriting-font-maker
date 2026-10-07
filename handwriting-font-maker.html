@@ -409,12 +409,12 @@
 </svg>
         </div>
         <div class="brand-copy">
-          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.0</span></p>
+          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.1</span></p>
           <p class="brand-meta" data-i18n="brandMeta">Single HTML · Fully local processing</p>
         </div>
       </div>
       <div class="header-actions">
-        <button class="language-button" id="languageButton" type="button" aria-label="Switch language">EN</button>
+        <button class="language-button" id="languageButton" type="button" aria-label="英語に切り替え" title="英語に切り替え">EN</button>
         <button class="icon-button header-icon-button" id="helpButton" type="button" data-i18n-title="helpTitle" data-i18n-aria-label="helpTitle" title="使い方と注意事項" aria-label="使い方と注意事項">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.35 2.35 0 1 1 3.72 1.9c-.92.67-1.52 1.12-1.52 2.1"/><path d="M12 17h.01"/></svg>
         </button>
@@ -734,6 +734,7 @@
     </div>
     <div class="dialog-body">
       <!-- APP:HELP:BEGIN Handwriting Font Maker help. -->
+      <p data-i18n="helpLanguage">ヘッダーのENで英語に、JAで日本語に切り替えます。</p>
       <h3 data-i18n="helpBasicsTitle">基本操作</h3>
       <ol>
         <li data-i18n="helpStep1">作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。</li>
@@ -761,8 +762,8 @@
     (() => {
       'use strict';
 
-      const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.0","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
-      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-05T22:53:16.4528199Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.0"},"dependencies":[]};
+      const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.1","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
+      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-07T13:20:17.9909939Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.1"},"dependencies":[]};
       // Asset payloads are Base64 exactly once. The JSON bundle itself is embedded directly.
       const assetBundle = {"schemaVersion":2,"dependencies":{}};
       const blobUrls = new Set();
@@ -824,7 +825,7 @@
       const translations = {
         ja: {
           brandMeta: '単一HTML・完全ローカル処理', introTitle: '書いた文字を、そのままフォントへ', lead: '文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。', localBadge: '完全ローカル処理',
-          helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
+          helpLanguage: 'ヘッダーのENで英語に、JAで日本語に切り替えます。', helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
           setupTitle: '作る文字を選ぶ', setupLead: '必要な文字だけ選べます。空白は自動でフォントに含まれます。', projectData: '作業データ', projectDataHelp: '書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。', saveProjectFile: '作業データを保存', loadProject: '作業データを読み込む', projectSaved: '作業データを保存しました。', projectLoaded: '作業データを読み込みました。', projectLoadFailed: '作業データを読み込めませんでした。ファイルが壊れているか、このアプリの形式ではない可能性があります。', projectLoadConfirmTitle: '作業データを読み込みますか？', projectLoadConfirmMessage: '現在の手書き内容と設定は、読み込む作業データで置き換わります。', projectLoadConfirm: '読み込む', newProject: '新しい作業', fontSettings: 'フォント設定', fontName: 'フォント名', fontNameHelp: 'フォント内部の名前にも使われます。', customText: '使いたい文字だけ追加', customPlaceholder: '例: Browser Kitty 2026 / ありがとう', customHelp: '同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。', characterSets: '文字セット', hiragana: 'ひらがな', katakana: 'カタカナ', uppercase: '英大文字', lowercase: '英小文字', digits: '数字', symbols: 'よく使う記号', charactersToWrite: '文字を書きます', selectionNote: 'あとから文字セットへ戻って変更できます。', startWriting: '文字を書き始める',
           projectFilename: 'バックアップのファイル名', retainedCharacterLimit: '保存済みの文字を含めて最大180文字です。不要な文字を選び直して線を消すか、作業をバックアップしてから新しい作業を始めてください。',
           saveEditableProject: '編集用データを保存', backupAnytime: 'TTF生成中やエラー時も、書く画面から編集用データを保存できます。', filterCharacters: '文字の絞り込み', filterAll: 'すべて', filterUnfinished: '未入力', filterReview: '要確認', filterNoneUnfinished: 'すべての文字が入力済みです。', filterNoneReview: '要確認の文字はありません。', filterChecking: 'フォント生成後に要確認の文字を表示します。', helpRetry: 'フォント生成に失敗した場合は「フォント表示を再試行」を押せます。書いた線は保持され、再試行中も編集用データを保存できます。', helpResume: '書く画面の「編集用データを保存」で、TTF生成中やエラー時も作業をバックアップできます。文字一覧を「未入力」「要確認」で絞り込めます。絞り込みでは現在の文字や前へ・次への順序は変わりません。',
@@ -836,7 +837,7 @@
         },
         en: {
           brandMeta: 'Single HTML · Fully local processing', introTitle: 'Turn your handwriting into a font', lead: 'Write characters in the browser and save them as a TrueType font. The app builds font outlines directly from pen coordinates instead of tracing a raster image.', localBadge: 'Fully local processing',
-          helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
+          helpLanguage: 'Use EN in the header to switch to English, or JA to switch to Japanese.', helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
           setupTitle: 'Choose characters', setupLead: 'Select only the characters you need. Space is added automatically.', projectData: 'Project data', projectDataHelp: 'Save handwriting strokes and settings as JSON, then load them on another device to continue.', saveProjectFile: 'Save project data', loadProject: 'Load project data', projectSaved: 'Saved the project data.', projectLoaded: 'Loaded the project data.', projectLoadFailed: 'The project data could not be loaded. The file may be damaged or not created by this app.', projectLoadConfirmTitle: 'Load project data?', projectLoadConfirmMessage: 'Your current handwriting and settings will be replaced by the loaded project data.', projectLoadConfirm: 'Load', newProject: 'New project', fontSettings: 'Font settings', fontName: 'Font name', fontNameHelp: 'This is also used inside the generated font.', customText: 'Add only the characters you need', customPlaceholder: 'Example: Browser Kitty 2026 / Hello!', customHelp: 'Duplicate characters are removed. v1.0.0 supports BMP characters.', characterSets: 'Character sets', hiragana: 'Hiragana', katakana: 'Katakana', uppercase: 'Uppercase A-Z', lowercase: 'Lowercase a-z', digits: 'Digits', symbols: 'Common symbols', charactersToWrite: 'characters to write', selectionNote: 'You can return here and change the selection later.', startWriting: 'Start writing',
           projectFilename: 'Backup filename', retainedCharacterLimit: 'The 180-character limit includes saved drawings. Reselect and clear drawings you no longer need, or back up this project before starting a new one.',
           saveEditableProject: 'Save editable project', backupAnytime: 'You can save an editable backup from the writing screen while the TTF is generating or unavailable.', filterCharacters: 'Filter characters', filterAll: 'All', filterUnfinished: 'Unfinished', filterReview: 'Review', filterNoneUnfinished: 'All characters are written.', filterNoneReview: 'No characters need review.', filterChecking: 'Review characters appear after font generation.', helpRetry: 'If font generation fails, use Retry font preview. Your strokes are preserved, and you can save an editable project while retrying.', helpResume: 'Use Save editable project on the writing screen to back up your strokes even while the TTF is generating or unavailable. Filter the character list by Unfinished or Review. Filtering keeps the current character and Previous/Next order unchanged.',
@@ -1016,8 +1017,10 @@
         $$('[data-i18n-placeholder]').forEach(element => { element.placeholder = t(element.dataset.i18nPlaceholder); });
         $$('[data-i18n-title]').forEach(element => { element.title = t(element.dataset.i18nTitle); });
         $$('[data-i18n-aria-label]').forEach(element => { element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel)); });
-        $('#languageButton').textContent = state.language === 'ja' ? 'EN' : '日本語';
-        $('#languageButton').setAttribute('aria-label', state.language === 'ja' ? '英語に切り替え' : 'Switch to Japanese');
+        $('#languageButton').textContent = state.language === 'ja' ? 'EN' : 'JA';
+        const languageLabel = state.language === 'ja' ? '英語に切り替え' : 'Switch to Japanese';
+        $('#languageButton').setAttribute('aria-label', languageLabel);
+        $('#languageButton').title = languageLabel;
         document.title = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#brandName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#footerName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
