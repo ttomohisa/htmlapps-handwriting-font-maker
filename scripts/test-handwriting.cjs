@@ -114,7 +114,7 @@ function harness(options = {}) {
   }
   document.documentElement = document.querySelector('html'); document.body = document.querySelector('body'); document.head = document.querySelector('head'); document.activeElement = document.body;
   const window = new Target(); window.devicePixelRatio = 1;
-  const context = { document, window, HTMLElement: Element, HTMLDialogElement: Element, navigator: { language: 'en' }, Blob, URL: { createObjectURL(blob) { const url = `blob:test-${nextUrl++}`; urls.set(url, blob); return url; }, revokeObjectURL: url => urls.delete(url) }, TextEncoder, TextDecoder, Uint8Array, Uint8ClampedArray, Int32Array, DataView, ArrayBuffer, performance: { now: () => now }, atob: value => Buffer.from(value, 'base64').toString('binary'), console: { error: (...items) => logs.push(items), warn: (...items) => logs.push(items), log: (...items) => logs.push(items) }, setTimeout(callback, delay = 0) { const id = nextTimer++; timers.set(id, { callback, due: now + delay }); return id; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => context.setTimeout(callback, 0), cancelAnimationFrame: id => timers.delete(id), localStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { if (options.storageFails) throw new Error('Storage quota test'); storage.set(key, value); }, removeItem: key => storage.delete(key) }, FontFace: class { constructor(family, bytes) { this.family = family; this.bytes = bytes; this.wait = deferred(); faces.push(this); } load() { return this.wait.promise; } resolve() { this.wait.resolve(this); } reject() { this.wait.reject(new Error('Controlled FontFace load failure')); } } };
+  const context = { document, window, HTMLElement: Element, HTMLDialogElement: Element, navigator: { language: options.language || 'en' }, Blob, URL: { createObjectURL(blob) { const url = `blob:test-${nextUrl++}`; urls.set(url, blob); return url; }, revokeObjectURL: url => urls.delete(url) }, TextEncoder, TextDecoder, Uint8Array, Uint8ClampedArray, Int32Array, DataView, ArrayBuffer, performance: { now: () => now }, atob: value => Buffer.from(value, 'base64').toString('binary'), console: { error: (...items) => logs.push(items), warn: (...items) => logs.push(items), log: (...items) => logs.push(items) }, setTimeout(callback, delay = 0) { const id = nextTimer++; timers.set(id, { callback, due: now + delay }); return id; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => context.setTimeout(callback, 0), cancelAnimationFrame: id => timers.delete(id), localStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { if (options.storageFails) throw new Error('Storage quota test'); storage.set(key, value); }, removeItem: key => storage.delete(key) }, FontFace: class { constructor(family, bytes) { this.family = family; this.bytes = bytes; this.wait = deferred(); faces.push(this); } load() { return this.wait.promise; } resolve() { this.wait.resolve(this); } reject() { this.wait.reject(new Error('Controlled FontFace load failure')); } } };
   vm.createContext(context); vm.runInContext(source, context, { filename: htmlPath });
   const read = expression => context.__testAccess(expression);
   const $ = selector => { const element = document.querySelector(selector); assert.ok(element, `Expected control ${selector}`); return element; };
@@ -136,6 +136,50 @@ function familyNames(bytes) {
 }
 const cases = [];
 function test(name, fn) { cases.push({ name, fn }); }
+// Header regressions run against the real inline runtime in every release variant.
+for (const language of ['ja', 'en']) {
+  test(`${language}: header language button shows the target code`, () => {
+    const h = harness({ language });
+    assert.equal(h.document.documentElement.lang, language);
+    assert.equal(h.$('#languageButton').textContent, language === 'ja' ? 'EN' : 'JA');
+  });
+  test(`${language}: header language name and tooltip describe the target`, () => {
+    const h = harness({ language });
+    const expected = language === 'ja' ? '英語に切り替え' : 'Switch to Japanese';
+    assert.equal(h.$('#languageButton').getAttribute('aria-label'), expected);
+    assert.equal(h.$('#languageButton').title, expected);
+  });
+  test(`${language}: Help and the local-processing badge remain localized`, () => {
+    const h = harness({ language });
+    const help = language === 'ja' ? '使い方と注意事項' : 'How to use & notes';
+    assert.equal(h.$('#helpButton').getAttribute('aria-label'), help);
+    assert.equal(h.$('#helpButton').title, help);
+    assert.equal(h.$('[data-i18n="helpLanguage"]').textContent, language === 'ja' ? 'ヘッダーのENで英語に、JAで日本語に切り替えます。' : 'Use EN in the header to switch to English, or JA to switch to Japanese.');
+    assert.equal(h.$('[data-i18n="localBadge"]').textContent, language === 'ja' ? '完全ローカル処理' : 'Fully local processing');
+    h.$('#helpButton').click(); assert.equal(h.$('#helpDialog').open, true);
+    h.$('#closeHelpButton').click(); assert.equal(h.$('#helpDialog').open, false);
+  });
+}
+test('Repeated header switches preserve project data and restore the saved language', () => {
+  const h = setup(harness({ language: 'ja' }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  const original = captureProject(h), storageKey = `${h.read('STORAGE_KEY')}:language`;
+  for (const language of ['en', 'ja', 'en', 'ja']) {
+    h.$('#languageButton').click();
+    assert.equal(h.state.language, language);
+    assert.equal(h.$('#languageButton').textContent, language === 'ja' ? 'EN' : 'JA');
+    assert.equal(h.$('#languageButton').title, language === 'ja' ? '英語に切り替え' : 'Switch to Japanese');
+    assert.equal(captureProject(h), original);
+    assert.equal(h.storage.get(storageKey), language);
+    const restored = harness({ language: language === 'ja' ? 'en' : 'ja', storage: h.storage });
+    assert.equal(restored.state.language, language);
+    assert.equal(restored.$('#languageButton').textContent, language === 'ja' ? 'EN' : 'JA');
+  }
+});
+test('Initial header markup describes the EN target before runtime localization', () => {
+  const button = html.match(/<button\b[^>]*id="languageButton"[^>]*>/)[0];
+  assert.match(button, /aria-label="英語に切り替え"/);
+  assert.match(button, /title="英語に切り替え"/);
+});
 test('Clear → draw → toast Undo preserves the newer stroke and exact counter', () => { const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] } }); h.run('clearCurrent'); h.draw(); const newer = clone(h.state.glyphs.A.strokes); h.$('#appToastAction').click(); assert.deepEqual(clone(h.state.glyphs.A.strokes), newer); assert.equal(h.state.totalPoints, actualPoints(h.state)); });
 test('Redo refuses whole-stroke overflow and preserves its redo stack', () => { const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(2)], redo: [] }, B: { strokes: [stroke(79998)], redo: [] } }); h.run('undoCurrent'); h.state.glyphs.B.strokes.push(stroke(2)); h.state.totalPoints += 2; h.run('redoCurrent'); assert.equal(h.state.totalPoints, 80000); assert.equal(h.state.glyphs.A.redo.length, 1); assert.equal(h.state.glyphs.A.strokes.length, 0); });
 test('Active stroke commits to its original glyph at character navigation', () => { const h = setup(harness()); h.pointer('pointerdown'); h.pointer('pointermove', { clientX: 200 }); h.run('selectCharacter', 1); h.pointer('pointerup', { clientX: 900 }); assert.equal(h.state.glyphs.A?.strokes.length, 1); assert.equal(h.state.glyphs.B?.strokes.length || 0, 0); assert.equal(h.state.glyphs.A.strokes[0].points.length, 2); assert.equal(h.state.totalPoints, actualPoints(h.state)); });

@@ -37,7 +37,7 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 - Show completed count and percentage in a writing progress bar
 - Jump directly to unfinished or review glyphs when needed
 - Filter the character list by All / Unfinished / Review, with one shared selection across desktop and the mobile character drawer
-- Japanese / English UI
+- Japanese / English UI with target-language EN / JA header controls and localized tooltips
 - Responsive desktop and smartphone layouts
 - Build readable and self-extracting single-HTML distributions
 

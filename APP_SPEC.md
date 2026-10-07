@@ -3,7 +3,7 @@
 ## 1. Product identity
 
 - **Name:** Handwriting Font Maker / 手書きフォントメーカー
-- **Version:** 1.0.0
+- **Version:** 1.0.1
 - **One-sentence purpose:** Write selected characters in the browser and export them as a TrueType font without uploading handwriting data.
 - **Primary users:** People who want a small personal handwriting font for documents, labels, prototypes, or web experiments.
 - **Release artifacts:** `dist/index.html` and `dist/index.self-extract.html`, with the root `handwriting-font-maker.html` generated as an exact readable-download alias
@@ -140,6 +140,7 @@ v1.0.0 is the first formal release. It keeps the dependency-free conversion core
 - Main touch targets are at least about 44 px tall.
 - The drawing area disables touch scrolling only while drawing inside the canvas.
 - Controls have visible labels and accessible names.
+- The header language button displays the target language: `EN` in Japanese and `JA` in English, with matching localized accessible names and tooltips. Help keeps a localized name and tooltip. The Japanese privacy badge reads `完全ローカル処理`.
 - Visible focus styles are required.
 - Reduced-motion preference is respected.
 - Status changes use `aria-live`.
