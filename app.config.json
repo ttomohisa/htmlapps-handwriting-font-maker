@@ -3,7 +3,7 @@
   "name": "Handwriting Font Maker",
   "nameJa": "手書きフォントメーカー",
   "slug": "handwriting-font-maker",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Create a TrueType font from handwriting directly in the browser.",
   "descriptionJa": "ブラウザ上で書いた文字からTrueTypeフォントを作成します。",
   "defaultLanguage": "auto",

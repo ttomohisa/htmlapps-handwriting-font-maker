@@ -1,9 +1,14 @@
 # APP_SPEC.md
 
+## v1.0.2 — Icon normalization
+
+- Canonical background and matching artwork green: `#16624f`; background x/y radii exactly 25% of their respective dimensions.
+- Preserve artwork, padding, app behavior, and synchronized header/favicon/download/loader representations.
+
 ## 1. Product identity
 
 - **Name:** Handwriting Font Maker / 手書きフォントメーカー
-- **Version:** 1.0.1
+- **Version:** 1.0.2
 - **One-sentence purpose:** Write selected characters in the browser and export them as a TrueType font without uploading handwriting data.
 - **Primary users:** People who want a small personal handwriting font for documents, labels, prototypes, or web experiments.
 - **Release artifacts:** `dist/index.html` and `dist/index.self-extract.html`, with the root `handwriting-font-maker.html` generated as an exact readable-download alias
