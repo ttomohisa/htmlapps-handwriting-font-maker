@@ -37,6 +37,7 @@ $required = @(
   "scripts\verify-standalone.ps1",
   "scripts\verify-self-extract.ps1",
   "scripts\test-handwriting.cjs",
+  "scripts\test-modal-layout.cjs",
   "scripts\test-packaging.cjs",
   "README.md",
   "README.ja.md",
@@ -233,6 +234,8 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 foreach ($relative in @("src\index.template.html", "dist\index.html", "dist\index.self-extract.html")) {
   & node (Join-Path $Root "scripts\test-handwriting.cjs") --html (Join-Path $Root $relative)
   if ($LASTEXITCODE -ne 0) { throw "Handwriting behavior regression tests failed: $relative" }
+  & node (Join-Path $Root "scripts\test-modal-layout.cjs") --html (Join-Path $Root $relative)
+  if ($LASTEXITCODE -ne 0) { throw "Modal layout regression tests failed: $relative" }
 }
 & node (Join-Path $Root "scripts\test-packaging.cjs") --powershell ((Get-Process -Id $PID).Path)
 if ($LASTEXITCODE -ne 0) { throw "Release packaging regression tests failed." }

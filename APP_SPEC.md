@@ -1,5 +1,11 @@
 # APP_SPEC.md
 
+## v1.0.3 — Contained modal scrolling
+
+- Lock root and body scrolling while a native modal is open, including Help.
+- Keep confirmation and character-picker headers outside their shrinkable scrolling bodies, so all actions and final glyphs remain reachable on short screens.
+- Preserve the existing Help shell, backdrop, dismissal behavior, font generation, drawing, and schema-v1 project data.
+
 ## v1.0.2 — Icon normalization
 
 - Canonical background and matching artwork green: `#16624f`; background x/y radii exactly 25% of their respective dimensions.
@@ -8,7 +14,7 @@
 ## 1. Product identity
 
 - **Name:** Handwriting Font Maker / 手書きフォントメーカー
-- **Version:** 1.0.2
+- **Version:** 1.0.3
 - **One-sentence purpose:** Write selected characters in the browser and export them as a TrueType font without uploading handwriting data.
 - **Primary users:** People who want a small personal handwriting font for documents, labels, prototypes, or web experiments.
 - **Release artifacts:** `dist/index.html` and `dist/index.self-extract.html`, with the root `handwriting-font-maker.html` generated as an exact readable-download alias
@@ -150,6 +156,7 @@ v1.0.0 is the first formal release. It keeps the dependency-free conversion core
 - Reduced-motion preference is respected.
 - Status changes use `aria-live`.
 - The help dialog remains scrollable within the viewport.
+- Help, confirmation, and character-list dialogs prevent background scrolling while open. Confirmation and character-list bodies use the height remaining below their nonshrinking headers; their final buttons or glyphs are reachable by internal scrolling, including at 393×252 px. Existing Close, Escape, and backdrop dismissal behavior is preserved.
 
 ## 8. Performance expectations
 
@@ -209,6 +216,7 @@ Async font generations use a monotonically increasing generation id invalidated 
 - Duplicate characters in edited project JSON are deduplicated before TTF generation.
 - Project data above 180 combined active/stored drawing characters or 80,000 valid points is rejected instead of partially loaded.
 - New project asks for confirmation.
+- At desktop and short mobile heights in Japanese and English, modal outside-wheel input does not move the page. Help's final note, both New project actions, and the final character-list row can be reached by internal scrolling, with the Close control remaining visible. Closing a modal restores normal page scrolling. Verify native bounds and input separately from source/CSS contract tests.
 - No starter text remains in visible UI or help.
 - The default build refreshes the root readable-download alias, including when missing; explicit custom-output builds leave it unchanged. Repository checks include dependency-free behavior and packaging suites, and direct output verification fails on a stale or missing root alias.
 

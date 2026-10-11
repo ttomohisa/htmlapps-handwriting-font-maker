@@ -289,6 +289,7 @@
     .app-toast-action { flex: 0 0 auto; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 800; cursor: pointer; }
     .app-toast-action:hover { background: var(--surface-hover); }
     .app-toast-action[hidden] { display: none; }
+    html:has(dialog:modal), body:has(dialog:modal) { overflow: hidden; overscroll-behavior: none; }
     dialog { width: min(640px, calc(100% - 28px)); max-height: min(760px, calc(100dvh - 28px)); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); }
     dialog::backdrop { background: rgba(15,17,14,.52); backdrop-filter: blur(4px); }
     .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
@@ -302,6 +303,10 @@
     .dialog-body li + li { margin-top: 7px; }
     .dialog-note { margin-top: 12px; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 10px; background: var(--accent-soft); color: var(--text) !important; }
     .app-confirm-dialog { width: min(420px, calc(100% - 24px)); max-width: 100%; }
+    /* Allocate the remaining sheet height to its body; closed native dialogs stay hidden. */
+    .app-confirm-dialog[open], .glyph-picker-dialog[open] { display: flex; flex-direction: column; }
+    .app-confirm-header, .glyph-picker-dialog > .dialog-header { flex-shrink: 0; }
+    .app-confirm-body, .glyph-picker-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; }
     .app-confirm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px 13px; border-bottom: 1px solid var(--line); }
     .app-confirm-title { margin: 0; font-size: 17px; }
     .app-confirm-close { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
@@ -316,7 +321,7 @@
     .app-confirm-button.danger { border-color: var(--danger); background: var(--danger); color: #fff; }
     .mobile-bottom-bar { display: none; }
     .glyph-picker-dialog { width: min(500px, calc(100% - 24px)); }
-    .glyph-picker-body { padding: 12px; overflow: auto; max-height: calc(100dvh - 90px); }
+    .glyph-picker-body { padding: 12px; }
     .glyph-picker-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 6px; }
     .glyph-picker-grid .glyph-button { min-height: 48px; aspect-ratio: auto; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -409,7 +414,7 @@
 </svg>
         </div>
         <div class="brand-copy">
-          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.2</span></p>
+          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.3</span></p>
           <p class="brand-meta" data-i18n="brandMeta">Single HTML · Fully local processing</p>
         </div>
       </div>
@@ -735,6 +740,7 @@
     <div class="dialog-body">
       <!-- APP:HELP:BEGIN Handwriting Font Maker help. -->
       <p data-i18n="helpLanguage">ヘッダーのENで英語に、JAで日本語に切り替えます。</p>
+      <p data-i18n="helpDialogs">ヘルプ・確認画面・文字一覧を開いている間は、背景をスクロールしません。高さが足りないときは、画面内をスクロールして末尾の項目やボタンを表示できます。</p>
       <h3 data-i18n="helpBasicsTitle">基本操作</h3>
       <ol>
         <li data-i18n="helpStep1">作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。</li>
@@ -826,6 +832,7 @@
         ja: {
           brandMeta: '単一HTML・完全ローカル処理', introTitle: '書いた文字を、そのままフォントへ', lead: '文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。', localBadge: '完全ローカル処理',
           helpLanguage: 'ヘッダーのENで英語に、JAで日本語に切り替えます。', helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
+          helpDialogs: 'ヘルプ・確認画面・文字一覧を開いている間は、背景をスクロールしません。高さが足りないときは、画面内をスクロールして末尾の項目やボタンを表示できます。',
           setupTitle: '作る文字を選ぶ', setupLead: '必要な文字だけ選べます。空白は自動でフォントに含まれます。', projectData: '作業データ', projectDataHelp: '書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。', saveProjectFile: '作業データを保存', loadProject: '作業データを読み込む', projectSaved: '作業データを保存しました。', projectLoaded: '作業データを読み込みました。', projectLoadFailed: '作業データを読み込めませんでした。ファイルが壊れているか、このアプリの形式ではない可能性があります。', projectLoadConfirmTitle: '作業データを読み込みますか？', projectLoadConfirmMessage: '現在の手書き内容と設定は、読み込む作業データで置き換わります。', projectLoadConfirm: '読み込む', newProject: '新しい作業', fontSettings: 'フォント設定', fontName: 'フォント名', fontNameHelp: 'フォント内部の名前にも使われます。', customText: '使いたい文字だけ追加', customPlaceholder: '例: Browser Kitty 2026 / ありがとう', customHelp: '同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。', characterSets: '文字セット', hiragana: 'ひらがな', katakana: 'カタカナ', uppercase: '英大文字', lowercase: '英小文字', digits: '数字', symbols: 'よく使う記号', charactersToWrite: '文字を書きます', selectionNote: 'あとから文字セットへ戻って変更できます。', startWriting: '文字を書き始める',
           projectFilename: 'バックアップのファイル名', retainedCharacterLimit: '保存済みの文字を含めて最大180文字です。不要な文字を選び直して線を消すか、作業をバックアップしてから新しい作業を始めてください。',
           saveEditableProject: '編集用データを保存', backupAnytime: 'TTF生成中やエラー時も、書く画面から編集用データを保存できます。', filterCharacters: '文字の絞り込み', filterAll: 'すべて', filterUnfinished: '未入力', filterReview: '要確認', filterNoneUnfinished: 'すべての文字が入力済みです。', filterNoneReview: '要確認の文字はありません。', filterChecking: 'フォント生成後に要確認の文字を表示します。', helpRetry: 'フォント生成に失敗した場合は「フォント表示を再試行」を押せます。書いた線は保持され、再試行中も編集用データを保存できます。', helpResume: '書く画面の「編集用データを保存」で、TTF生成中やエラー時も作業をバックアップできます。文字一覧を「未入力」「要確認」で絞り込めます。絞り込みでは現在の文字や前へ・次への順序は変わりません。',
@@ -838,6 +845,7 @@
         en: {
           brandMeta: 'Single HTML · Fully local processing', introTitle: 'Turn your handwriting into a font', lead: 'Write characters in the browser and save them as a TrueType font. The app builds font outlines directly from pen coordinates instead of tracing a raster image.', localBadge: 'Fully local processing',
           helpLanguage: 'Use EN in the header to switch to English, or JA to switch to Japanese.', helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
+          helpDialogs: 'The background stays still while Help, a confirmation, or the character list is open. On a short screen, scroll inside the dialog to reach its last items or buttons.',
           setupTitle: 'Choose characters', setupLead: 'Select only the characters you need. Space is added automatically.', projectData: 'Project data', projectDataHelp: 'Save handwriting strokes and settings as JSON, then load them on another device to continue.', saveProjectFile: 'Save project data', loadProject: 'Load project data', projectSaved: 'Saved the project data.', projectLoaded: 'Loaded the project data.', projectLoadFailed: 'The project data could not be loaded. The file may be damaged or not created by this app.', projectLoadConfirmTitle: 'Load project data?', projectLoadConfirmMessage: 'Your current handwriting and settings will be replaced by the loaded project data.', projectLoadConfirm: 'Load', newProject: 'New project', fontSettings: 'Font settings', fontName: 'Font name', fontNameHelp: 'This is also used inside the generated font.', customText: 'Add only the characters you need', customPlaceholder: 'Example: Browser Kitty 2026 / Hello!', customHelp: 'Duplicate characters are removed. v1.0.0 supports BMP characters.', characterSets: 'Character sets', hiragana: 'Hiragana', katakana: 'Katakana', uppercase: 'Uppercase A-Z', lowercase: 'Lowercase a-z', digits: 'Digits', symbols: 'Common symbols', charactersToWrite: 'characters to write', selectionNote: 'You can return here and change the selection later.', startWriting: 'Start writing',
           projectFilename: 'Backup filename', retainedCharacterLimit: 'The 180-character limit includes saved drawings. Reselect and clear drawings you no longer need, or back up this project before starting a new one.',
           saveEditableProject: 'Save editable project', backupAnytime: 'You can save an editable backup from the writing screen while the TTF is generating or unavailable.', filterCharacters: 'Filter characters', filterAll: 'All', filterUnfinished: 'Unfinished', filterReview: 'Review', filterNoneUnfinished: 'All characters are written.', filterNoneReview: 'No characters need review.', filterChecking: 'Review characters appear after font generation.', helpRetry: 'If font generation fails, use Retry font preview. Your strokes are preserved, and you can save an editable project while retrying.', helpResume: 'Use Save editable project on the writing screen to back up your strokes even while the TTF is generating or unavailable. Filter the character list by Unfinished or Review. Filtering keeps the current character and Previous/Next order unchanged.',

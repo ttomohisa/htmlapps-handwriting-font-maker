@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3 - 2026-10-11
+
+- Prevent background scrolling while Help, a confirmation, or the character list is open.
+- Keep confirmation actions and the last glyph-picker rows reachable by internal scrolling on short screens, with nonshrinking headers and the existing Help shell and backdrop preserved.
+- Add modal-layout source/CSS contracts to checks for the template and both release variants; document the behavior in Japanese and English Help and README text.
+
 ## 1.0.2 - 2026-10-09
 
 - Normalize icon brand color and exact 25% background corner radii without changing artwork.

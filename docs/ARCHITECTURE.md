@@ -16,6 +16,7 @@ scripts/check-dependency-updates.ps1  Update discovery/reporting
 scripts/update-dependency.ps1          Reviewed upgrade helper
 scripts/verify-standalone.ps1 Static release checks
 scripts/test-handwriting.cjs Dependency-free application behavior regressions
+scripts/test-modal-layout.cjs Source/CSS modal-layout contracts (native browser QA is separate)
 scripts/test-packaging.cjs   Isolated build and readable-alias parity regressions
 dist/index.html              Generated readable release artifact
 dist/index.self-extract.html Generated gzip self-extracting artifact
@@ -52,7 +53,11 @@ The starter includes the canonical confirmation and toast APIs in the default so
 16. Reject the declared unresolved build placeholders and common external runtime resource references.
 17. For a normal build, copy the verified readable HTML to `handwriting-font-maker.html`. A build with an explicit `-OutputPath` does not alter this alias.
 
-`scripts/check-repository.ps1` runs the dependency-free Node.js behavior and packaging suites as well as both release verifiers. Packaging tests build an isolated copy of the actual source and verify replacement of a stale alias, recreation of a missing alias, and custom-output isolation. `node scripts/test-packaging.cjs --verify-output` separately checks exact bytes without repairing either file, so missing or stale downloads fail visibly. Existing CI workflows invoke the full repository check.
+`scripts/check-repository.ps1` runs the dependency-free Node.js behavior, modal-layout contract, and packaging suites as well as both release verifiers. The behavior and modal contracts run against the template and both release variants. Packaging tests build an isolated copy of the actual source and verify replacement of a stale alias, recreation of a missing alias, and custom-output isolation. `node scripts/test-packaging.cjs --verify-output` separately checks exact bytes without repairing either file, so missing or stale downloads fail visibly. Existing CI workflows invoke the full repository check.
+
+## Modal layout
+
+Native `dialog:modal` presence locks scrolling on both `html` and `body`, so dismissal releases the lock without additional runtime state. Only open confirmation and glyph-picker dialogs become flex columns. Their headers do not shrink, and their bodies use `min-height: 0`, flexible remaining height, and contained internal scrolling. Confirmation actions stay inside their body; the glyph-picker body contains its filters, grid, and empty state. Existing mobile safe-area padding, the Help shell, backdrop, and dismissal handlers are unchanged. CSS contracts guard this structure; actual native scrolling and viewport bounds require separate browser verification.
 
 ## Handwriting state boundaries
 

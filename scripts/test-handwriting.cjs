@@ -159,6 +159,12 @@ for (const language of ['ja', 'en']) {
     h.$('#helpButton').click(); assert.equal(h.$('#helpDialog').open, true);
     h.$('#closeHelpButton').click(); assert.equal(h.$('#helpDialog').open, false);
   });
+  test(`${language}: Help explains contained dialog scrolling`, () => {
+    const h = harness({ language });
+    assert.equal(h.$('[data-i18n="helpDialogs"]').textContent, language === 'ja'
+      ? 'ヘルプ・確認画面・文字一覧を開いている間は、背景をスクロールしません。高さが足りないときは、画面内をスクロールして末尾の項目やボタンを表示できます。'
+      : 'The background stays still while Help, a confirmation, or the character list is open. On a short screen, scroll inside the dialog to reach its last items or buttons.');
+  });
 }
 test('Repeated header switches preserve project data and restore the saved language', () => {
   const h = setup(harness({ language: 'ja' }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
