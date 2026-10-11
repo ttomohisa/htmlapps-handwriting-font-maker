@@ -57,6 +57,8 @@ If font generation fails, press **Retry font preview** beside the preview status
 
 TTF download is enabled only after at least one character has been drawn and the font for the current handwriting, pen width, and font name has successfully loaded. Editing invalidates the previous TTF immediately; an older asynchronous result cannot become downloadable after a later edit or project replacement.
 
+Help, confirmations, and the character list keep the background still while open. On short screens, scroll inside the dialog to reach its last items or buttons; the Close control stays at the top.
+
 ## Preserving handwriting detail
 
 The app does not rasterize handwriting and then rediscover its outline.
@@ -140,7 +142,7 @@ With PowerShell and Node.js 20 or newer installed, run:
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-repository.ps1
 ```
 
-This builds and verifies both release variants, runs the dependency-free handwriting and packaging regression suites, and checks exact root-download parity. The existing CI workflows run the same checks. To check already-built readable files without rebuilding or repairing them, run `node scripts/test-packaging.cjs --verify-output`; a stale or missing root alias fails.
+This builds and verifies both release variants, runs the dependency-free handwriting, modal-layout contract, and packaging regression suites, and checks exact root-download parity. The modal contracts check source/CSS structure; real scrolling, bounds, and native dialog input still need browser verification. The existing CI workflows run the same checks. To check already-built readable files without rebuilding or repairing them, run `node scripts/test-packaging.cjs --verify-output`; a stale or missing root alias fails.
 
 ### Dependencies
 
