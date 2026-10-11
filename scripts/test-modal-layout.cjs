@@ -88,3 +88,7 @@ test('Repository checks run modal contracts on source and both release variants'
   assert.match(loop[1], /& node \(Join-Path \$Root "scripts\\test-modal-layout\.cjs"\) --html \(Join-Path \$Root \$relative\)/);
   assert.match(loop[1], /if \(\$LASTEXITCODE -ne 0\) \{ throw "Modal layout regression tests failed: \$relative" \}/);
 });
+
+test('User help excludes layout audit commentary', () => {
+  assert.doesNotMatch(html, /data-i18n="helpDialogs"|helpDialogs\s*:/);
+});
