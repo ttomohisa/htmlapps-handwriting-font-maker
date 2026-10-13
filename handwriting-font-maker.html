@@ -294,7 +294,7 @@
     dialog::backdrop { background: rgba(15,17,14,.52); backdrop-filter: blur(4px); }
     .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
     .dialog-header h2 { margin: 0; font-size: 17px; }
-    .dialog-body { padding: 20px 20px 28px; overflow: auto; max-height: calc(100dvh - 102px); }
+    .dialog-body { flex: 1 1 auto; min-height: 0; padding: 20px 20px max(28px, env(safe-area-inset-bottom)); overflow: auto; overscroll-behavior: contain; }
     .dialog-body h3 { margin: 25px 0 8px; padding-top: 19px; border-top: 1px solid color-mix(in srgb, var(--line) 78%, transparent); font-size: 14px; }
     .dialog-body h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
     .dialog-body p, .dialog-body li { color: var(--muted); font-size: 13px; line-height: 1.7; }
@@ -304,8 +304,8 @@
     .dialog-note { margin-top: 12px; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 10px; background: var(--accent-soft); color: var(--text) !important; }
     .app-confirm-dialog { width: min(420px, calc(100% - 24px)); max-width: 100%; }
     /* Allocate the remaining sheet height to its body; closed native dialogs stay hidden. */
-    .app-confirm-dialog[open], .glyph-picker-dialog[open] { display: flex; flex-direction: column; }
-    .app-confirm-header, .glyph-picker-dialog > .dialog-header { flex-shrink: 0; }
+    .app-confirm-dialog[open], .glyph-picker-dialog[open], #helpDialog[open] { display: flex; flex-direction: column; }
+    .app-confirm-header, .glyph-picker-dialog > .dialog-header, #helpDialog > .dialog-header { flex-shrink: 0; }
     .app-confirm-body, .glyph-picker-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; }
     .app-confirm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px 13px; border-bottom: 1px solid var(--line); }
     .app-confirm-title { margin: 0; font-size: 17px; }
@@ -414,8 +414,8 @@
 </svg>
         </div>
         <div class="brand-copy">
-          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.3</span></p>
-          <p class="brand-meta" data-i18n="brandMeta">Single HTML · Fully local processing</p>
+          <p class="brand-name"><span id="brandName">Handwriting Font Maker</span><span class="version-badge" id="versionBadge">v1.0.4</span></p>
+          <p class="brand-meta" data-i18n="brandMeta">Create TTF fonts from handwriting</p>
         </div>
       </div>
       <div class="header-actions">
@@ -472,7 +472,7 @@
           <label class="field" for="customTextInput">
             <span class="field-label" data-i18n="customText">使いたい文字だけ追加</span>
             <textarea class="custom-text" id="customTextInput" maxlength="1000" data-i18n-placeholder="customPlaceholder" placeholder="例: Browser Kitty 2026 / ありがとう"></textarea>
-            <span class="field-help" data-i18n="customHelp">同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。</span>
+            <span class="field-help" data-i18n="customHelp">同じ文字は1回にまとめます。BMP文字に対応します。</span>
           </label>
           <div class="inline-warning" id="unsupportedWarning" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/></svg>
@@ -631,7 +631,7 @@
         </div>
         <div class="export-card">
           <h3 data-i18n="saveFont">フォントを保存</h3>
-          <p data-i18n="saveFontHelp">v1.0.0ではTrueType (.ttf) に対応しています。</p>
+          <p data-i18n="saveFontHelp">TrueType (.ttf) に対応しています。</p>
           <label class="field" for="outputFilename" style="margin-top:14px">
             <span class="field-label" data-i18n="outputFilename">ファイル名</span>
             <span class="filename-control">
@@ -739,7 +739,6 @@
     </div>
     <div class="dialog-body">
       <!-- APP:HELP:BEGIN Handwriting Font Maker help. -->
-      <p data-i18n="helpLanguage">ヘッダーのENで英語に、JAで日本語に切り替えます。</p>
       <h3 data-i18n="helpBasicsTitle">基本操作</h3>
       <ol>
         <li data-i18n="helpStep1">作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。</li>
@@ -750,13 +749,13 @@
       <p data-i18n="helpResume">書く画面の「編集用データを保存」で、TTF生成中やエラー時も作業をバックアップできます。文字一覧を「未入力」「要確認」で絞り込めます。</p>
       <h3 data-i18n="helpPrivacyTitle">プライバシー</h3>
       <p data-i18n="helpPrivacyBody">手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。</p>
-      <h3 data-i18n="helpQualityTitle">v1.0.0の変換方式</h3>
-      <p data-i18n="helpQualityBody">書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。v1.0.0では生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。</p>
+      <h3 data-i18n="helpQualityTitle">手書きからフォントへの変換</h3>
+      <p data-i18n="helpQualityBody">書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。</p>
       <h3 data-i18n="helpNotesTitle">注意事項</h3>
       <ul>
-        <li data-i18n="helpNoteV01">v1.0.0はTrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。</li>
+        <li data-i18n="helpNoteFormats">TrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。</li>
         <li data-i18n="helpNoteStorage">作業は端末内へ自動保存します。作業データをJSONで明示保存・読み込みできるため、バックアップや別端末への移動にも使えます。</li>
-        <li data-i18n="helpNoteUnicode">v1.0.0はBMP内の文字を対象にしています。絵文字など一部の文字は対象外です。</li>
+        <li data-i18n="helpNoteUnicode">BMP内の文字を対象にしています。絵文字など一部の文字は対象外です。</li>
       </ul>
       <p class="dialog-note" data-i18n="helpOffline">配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。</p>
       <!-- APP:HELP:END -->
@@ -767,8 +766,8 @@
     (() => {
       'use strict';
 
-      const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.3","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
-      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-11T22:11:43.0901120Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.3"},"dependencies":[]};
+      const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.4","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
+      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-13T02:11:06.703188Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
       // Asset payloads are Base64 exactly once. The JSON bundle itself is embedded directly.
       const assetBundle = {"schemaVersion":2,"dependencies":{}};
       const blobUrls = new Set();
@@ -829,28 +828,28 @@
 
       const translations = {
         ja: {
-          brandMeta: '単一HTML・完全ローカル処理', introTitle: '書いた文字を、そのままフォントへ', lead: '文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。', localBadge: '完全ローカル処理',
-          helpLanguage: 'ヘッダーのENで英語に、JAで日本語に切り替えます。', helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
-          setupTitle: '作る文字を選ぶ', setupLead: '必要な文字だけ選べます。空白は自動でフォントに含まれます。', projectData: '作業データ', projectDataHelp: '書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。', saveProjectFile: '作業データを保存', loadProject: '作業データを読み込む', projectSaved: '作業データを保存しました。', projectLoaded: '作業データを読み込みました。', projectLoadFailed: '作業データを読み込めませんでした。ファイルが壊れているか、このアプリの形式ではない可能性があります。', projectLoadConfirmTitle: '作業データを読み込みますか？', projectLoadConfirmMessage: '現在の手書き内容と設定は、読み込む作業データで置き換わります。', projectLoadConfirm: '読み込む', newProject: '新しい作業', fontSettings: 'フォント設定', fontName: 'フォント名', fontNameHelp: 'フォント内部の名前にも使われます。', customText: '使いたい文字だけ追加', customPlaceholder: '例: Browser Kitty 2026 / ありがとう', customHelp: '同じ文字は1回にまとめます。v1.0.0ではBMP文字に対応します。', characterSets: '文字セット', hiragana: 'ひらがな', katakana: 'カタカナ', uppercase: '英大文字', lowercase: '英小文字', digits: '数字', symbols: 'よく使う記号', charactersToWrite: '文字を書きます', selectionNote: 'あとから文字セットへ戻って変更できます。', startWriting: '文字を書き始める',
+          brandMeta: '手書きからTTFフォントを作成', introTitle: '書いた文字を、そのままフォントへ', lead: '文字をブラウザ上で書いて、TrueTypeフォントとして保存します。画像化せず、ペンの座標から直接フォント輪郭を作ります。', localBadge: '完全ローカル処理',
+          helpTitle: '使い方と注意事項', close: '閉じる', stepSetup: '文字を選ぶ', stepWrite: '文字を書く', stepExport: '確認・保存', mobileSetup: '文字', mobileWrite: '書く', mobileExport: '保存',
+          setupTitle: '作る文字を選ぶ', setupLead: '必要な文字だけ選べます。空白は自動でフォントに含まれます。', projectData: '作業データ', projectDataHelp: '書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。', saveProjectFile: '作業データを保存', loadProject: '作業データを読み込む', projectSaved: '作業データを保存しました。', projectLoaded: '作業データを読み込みました。', projectLoadFailed: '作業データを読み込めませんでした。ファイルが壊れているか、このアプリの形式ではない可能性があります。', projectLoadConfirmTitle: '作業データを読み込みますか？', projectLoadConfirmMessage: '現在の手書き内容と設定は、読み込む作業データで置き換わります。', projectLoadConfirm: '読み込む', newProject: '新しい作業', fontSettings: 'フォント設定', fontName: 'フォント名', fontNameHelp: 'フォント内部の名前にも使われます。', customText: '使いたい文字だけ追加', customPlaceholder: '例: Browser Kitty 2026 / ありがとう', customHelp: '同じ文字は1回にまとめます。BMP文字に対応します。', characterSets: '文字セット', hiragana: 'ひらがな', katakana: 'カタカナ', uppercase: '英大文字', lowercase: '英小文字', digits: '数字', symbols: 'よく使う記号', charactersToWrite: '文字を書きます', selectionNote: 'あとから文字セットへ戻って変更できます。', startWriting: '文字を書き始める',
           projectFilename: 'バックアップのファイル名', retainedCharacterLimit: '保存済みの文字を含めて最大180文字です。不要な文字を選び直して線を消すか、作業をバックアップしてから新しい作業を始めてください。',
           saveEditableProject: '編集用データを保存', backupAnytime: 'TTF生成中やエラー時も、書く画面から編集用データを保存できます。', filterCharacters: '文字の絞り込み', filterAll: 'すべて', filterUnfinished: '未入力', filterReview: '要確認', filterNoneUnfinished: 'すべての文字が入力済みです。', filterNoneReview: '要確認の文字はありません。', filterChecking: 'フォント生成後に要確認の文字を表示します。', helpRetry: 'フォント生成に失敗した場合は「フォント表示を再試行」を押せます。書いた線は保持され、再試行中も編集用データを保存できます。', helpResume: '書く画面の「編集用データを保存」で、TTF生成中やエラー時も作業をバックアップできます。文字一覧を「未入力」「要確認」で絞り込めます。絞り込みでは現在の文字や前へ・次への順序は変わりません。',
           writeTitle: '文字を書く', progressLabel: '入力進捗', nextIncomplete: '次の未入力', nextWarning: '要確認へ', reviewAndSave: '確認・保存', guideCharacter: 'お手本', autosave: '自動保存', editCharacters: '文字を選び直す', characters: '文字', characterList: '文字一覧', canvasLabel: '手書き入力欄', canvasHint: 'ここに文字を書いてください', undo: '戻す', redo: 'やり直す', clear: '消去', penWidth: '線の太さ', previous: '前へ', next: '次へ', fontPreview: 'フォント化結果', fontPreviewHelp: '生成したTTFを12 / 16 / 24 / 48pxで読み直し、各サイズの見え方を確認します。', fontStatusEmpty: '文字を書くと実フォントの確認ができます。', fontStatusGenerating: 'フォントを生成しています…', fontStatusReady: '生成したTTFで表示しています。', fontStatusError: 'フォントを生成できませんでした。フォント表示を再試行するか、編集用データを保存してください。', retryFontPreview: 'フォント表示を再試行', qualityUnavailable: '字形を確認できません', qualityUnavailableDetail: 'フォントを生成できなかったため、各サイズの確認は未実施です。書いた線は保持されています。', sizeNotChecked: '未確認', needsReview: '要確認', sizeOk: 'OK', sizeAdvisory: '参考', sizeWarning: '要確認', sizeChecking: '確認中', qualitySizesWarning: sizes => `${sizes}で要確認です。`, reviewWarnings: '確認する', qualityChecking: '字形を確認しています…', qualityCheckingDetail: '生成したフォントを12 / 16 / 24 / 48pxで確認しています。', qualityOk: '確認したサイズで大きな問題は見つかりませんでした', qualityAdvisory: '12pxは参考確認です', qualityWarning: '小さいサイズで形が変わる可能性があります', qualityDetailOk: '16 / 24pxを48pxの実フォント表示と比較しました。12pxは参考表示です。', qualityDetailAdvisory: '12pxだけ細部が変わる可能性があります。小さい文字では一般的に起こるため、要確認には数えません。', qualityDetailGap: '16pxで別の線同士の間隔がかなり狭くなっています。実フォント表示を確認してください。', qualityDetailTopology: '48pxでは分かれている部分や内側の空間が、小さいサイズでは結合・消失しています。', qualityDetailBoth: '小さいサイズで形の結合・消失があり、線同士の間隔も狭くなっています。', qualitySummaryOk: '要確認の文字はありません', qualitySummaryOkDetail: '16 / 24pxを中心に実フォントの形を確認しました。12pxは参考表示です。', qualitySummaryEmpty: '字形チェックはまだありません', qualitySummaryEmptyDetail: '文字を書くと自動で確認します。', qualitySummaryWarning: count => `${count}文字を確認してください`,
-          exportTitle: '確認して保存', exportLead: '生成したフォントで文章を確認してから保存できます。', backToWriting: '文字を書く画面へ', tryFont: '文章で確認', tryFontHelp: '収録していない文字は端末の通常フォントで表示されます。', reviewPlaceholder: '今日はいい天気です。Browser Kitty 2026', completed: '入力済み', remaining: '未入力', fontSize: 'TTFサイズ', saveFont: 'フォントを保存', saveFontHelp: 'v1.0.0ではTrueType (.ttf) に対応しています。', outputFilename: 'ファイル名', outputFilenameHint: '拡張子 .ttf は自動で付きます。', downloadTtf: 'TTFを保存', fontFamily: 'フォント名', glyphCount: '収録文字', format: '形式', processing: '処理', fullyLocal: '完全ローカル',
+          exportTitle: '確認して保存', exportLead: '生成したフォントで文章を確認してから保存できます。', backToWriting: '文字を書く画面へ', tryFont: '文章で確認', tryFontHelp: '収録していない文字は端末の通常フォントで表示されます。', reviewPlaceholder: '今日はいい天気です。Browser Kitty 2026', completed: '入力済み', remaining: '未入力', fontSize: 'TTFサイズ', saveFont: 'フォントを保存', saveFontHelp: 'TrueType (.ttf) に対応しています。', outputFilename: 'ファイル名', outputFilenameHint: '拡張子 .ttf は自動で付きます。', downloadTtf: 'TTFを保存', fontFamily: 'フォント名', glyphCount: '収録文字', format: '形式', processing: '処理', fullyLocal: '完全ローカル',
           buildInfo: 'ビルド情報', appVersion: 'アプリ版数', builtAt: '生成日時', dependencies: '内包依存', footer: 'ブラウザ内でフォントを生成します',
-          helpBasicsTitle: '基本操作', helpStep1: '作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。', helpStep2: '文字を書く画面で、薄いお手本文字をなぞるようにマウス・指・ペンで書けます。お手本はON/OFFでき、戻す・やり直す・消去も使えます。', helpStep3: '「確認・保存」で実際に生成したフォントの表示を確認し、TTFを保存します。', helpPrivacyTitle: 'プライバシー', helpPrivacyBody: '手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。', helpQualityTitle: 'v1.0.0の変換方式', helpQualityBody: '書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。v1.0.0では生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。', helpNotesTitle: '注意事項', helpNoteV01: 'v1.0.0はTrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。', helpNoteStorage: '作業は端末内へ自動保存します。v1.0.0では作業データをJSONで明示保存・読み込みできるため、バックアップや別端末への移動にも使えます。', helpNoteUnicode: 'v1.0.0はBMP内の文字を対象にしています。絵文字など一部の文字は対象外です。', helpOffline: '配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。',
-          unsupported: count => `${count}文字はv1.0.0の対象外です（絵文字などBMP外の文字）。`, limitReached: `v1.0.0では最大${MAX_CHARS}文字までです。先頭から${MAX_CHARS}文字を使います。`, noCharacters: '1文字以上選んでください。', clearedGlyph: 'この文字を消去しました。', undoAction: '元に戻す', restored: '元に戻しました。', projectReset: '作業を初期化しました。', newProjectTitle: '新しい作業を始めますか？', newProjectMessage: '現在の手書きデータと設定を端末内の自動保存から削除します。', cancel: 'キャンセル', reset: '初期化する', downloaded: 'TTFを保存しました。', autosaveFailed: '端末内への自動保存ができませんでした。「編集用データを保存」でバックアップしてください。', restoredProject: '前回の作業を復元しました。', restoreFailed: '保存されていた作業を読み込めなかったため、新しい状態で開始しました。', pointLimit: '点の数が上限に達しました。不要な文字を選んで線を消してください。文字を選択から外すだけでは保存済みの点は減りません。'
+          helpBasicsTitle: '基本操作', helpStep1: '作りたい文字セットを選ぶか、「使いたい文字だけ追加」に文章を入力します。', helpStep2: '文字を書く画面で、薄いお手本文字をなぞるようにマウス・指・ペンで書けます。お手本はON/OFFでき、戻す・やり直す・消去も使えます。', helpStep3: '「確認・保存」で実際に生成したフォントの表示を確認し、TTFを保存します。', helpPrivacyTitle: 'プライバシー', helpPrivacyBody: '手書きの座標と生成処理はブラウザ内だけで扱います。このアプリから文字やフォントを外部サーバーへ送信しません。', helpQualityTitle: () => `v${APP_CONFIG.version}の変換方式`, helpQualityBody: '書いた線を画像化して輪郭抽出せず、ペン座標から直接TrueType輪郭を作ります。生成したTTFを12 / 16 / 24 / 48pxで表示し、48pxと比べて16 / 24pxで形が実際に結合・消失した場合を中心に要確認とします。12pxは参考表示です。警告しても字形そのものは自動変更しません。', helpNotesTitle: '注意事項', helpNoteFormats: 'TrueType（TTF）出力、サイズ別の字形確認、作業データの保存・読み込みに対応しています。WOFF2、細かな字間調整、複数字形には対応していません。', helpNoteStorage: '作業は端末内へ自動保存します。作業データをJSONで明示保存・読み込みできるため、バックアップや別端末への移動にも使えます。', helpNoteUnicode: 'BMP内の文字を対象にしています。絵文字など一部の文字は対象外です。', helpOffline: '配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。',
+          unsupported: count => `${count}文字は対象外です（絵文字などBMP外の文字）。`, limitReached: `最大${MAX_CHARS}文字までです。先頭から${MAX_CHARS}文字を使います。`, noCharacters: '1文字以上選んでください。', clearedGlyph: 'この文字を消去しました。', undoAction: '元に戻す', restored: '元に戻しました。', projectReset: '作業を初期化しました。', newProjectTitle: '新しい作業を始めますか？', newProjectMessage: '現在の手書きデータと設定を端末内の自動保存から削除します。', cancel: 'キャンセル', reset: '初期化する', downloaded: 'TTFを保存しました。', autosaveFailed: '端末内への自動保存ができませんでした。「編集用データを保存」でバックアップしてください。', restoredProject: '前回の作業を復元しました。', restoreFailed: '保存されていた作業を読み込めなかったため、新しい状態で開始しました。', pointLimit: '点の数が上限に達しました。不要な文字を選んで線を消してください。文字を選択から外すだけでは保存済みの点は減りません。'
         },
         en: {
-          brandMeta: 'Single HTML · Fully local processing', introTitle: 'Turn your handwriting into a font', lead: 'Write characters in the browser and save them as a TrueType font. The app builds font outlines directly from pen coordinates instead of tracing a raster image.', localBadge: 'Fully local processing',
-          helpLanguage: 'Use EN in the header to switch to English, or JA to switch to Japanese.', helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
-          setupTitle: 'Choose characters', setupLead: 'Select only the characters you need. Space is added automatically.', projectData: 'Project data', projectDataHelp: 'Save handwriting strokes and settings as JSON, then load them on another device to continue.', saveProjectFile: 'Save project data', loadProject: 'Load project data', projectSaved: 'Saved the project data.', projectLoaded: 'Loaded the project data.', projectLoadFailed: 'The project data could not be loaded. The file may be damaged or not created by this app.', projectLoadConfirmTitle: 'Load project data?', projectLoadConfirmMessage: 'Your current handwriting and settings will be replaced by the loaded project data.', projectLoadConfirm: 'Load', newProject: 'New project', fontSettings: 'Font settings', fontName: 'Font name', fontNameHelp: 'This is also used inside the generated font.', customText: 'Add only the characters you need', customPlaceholder: 'Example: Browser Kitty 2026 / Hello!', customHelp: 'Duplicate characters are removed. v1.0.0 supports BMP characters.', characterSets: 'Character sets', hiragana: 'Hiragana', katakana: 'Katakana', uppercase: 'Uppercase A-Z', lowercase: 'Lowercase a-z', digits: 'Digits', symbols: 'Common symbols', charactersToWrite: 'characters to write', selectionNote: 'You can return here and change the selection later.', startWriting: 'Start writing',
+          brandMeta: 'Create TTF fonts from handwriting', introTitle: 'Turn your handwriting into a font', lead: 'Write characters in the browser and save them as a TrueType font. The app builds font outlines directly from pen coordinates instead of tracing a raster image.', localBadge: 'Fully local processing',
+          helpTitle: 'How to use & notes', close: 'Close', stepSetup: 'Choose characters', stepWrite: 'Write characters', stepExport: 'Review & save', mobileSetup: 'Chars', mobileWrite: 'Write', mobileExport: 'Save',
+          setupTitle: 'Choose characters', setupLead: 'Select only the characters you need. Space is added automatically.', projectData: 'Project data', projectDataHelp: 'Save handwriting strokes and settings as JSON, then load them on another device to continue.', saveProjectFile: 'Save project data', loadProject: 'Load project data', projectSaved: 'Saved the project data.', projectLoaded: 'Loaded the project data.', projectLoadFailed: 'The project data could not be loaded. The file may be damaged or not created by this app.', projectLoadConfirmTitle: 'Load project data?', projectLoadConfirmMessage: 'Your current handwriting and settings will be replaced by the loaded project data.', projectLoadConfirm: 'Load', newProject: 'New project', fontSettings: 'Font settings', fontName: 'Font name', fontNameHelp: 'This is also used inside the generated font.', customText: 'Add only the characters you need', customPlaceholder: 'Example: Browser Kitty 2026 / Hello!', customHelp: 'Duplicate characters are removed. Supports BMP characters.', characterSets: 'Character sets', hiragana: 'Hiragana', katakana: 'Katakana', uppercase: 'Uppercase A-Z', lowercase: 'Lowercase a-z', digits: 'Digits', symbols: 'Common symbols', charactersToWrite: 'characters to write', selectionNote: 'You can return here and change the selection later.', startWriting: 'Start writing',
           projectFilename: 'Backup filename', retainedCharacterLimit: 'The 180-character limit includes saved drawings. Reselect and clear drawings you no longer need, or back up this project before starting a new one.',
           saveEditableProject: 'Save editable project', backupAnytime: 'You can save an editable backup from the writing screen while the TTF is generating or unavailable.', filterCharacters: 'Filter characters', filterAll: 'All', filterUnfinished: 'Unfinished', filterReview: 'Review', filterNoneUnfinished: 'All characters are written.', filterNoneReview: 'No characters need review.', filterChecking: 'Review characters appear after font generation.', helpRetry: 'If font generation fails, use Retry font preview. Your strokes are preserved, and you can save an editable project while retrying.', helpResume: 'Use Save editable project on the writing screen to back up your strokes even while the TTF is generating or unavailable. Filter the character list by Unfinished or Review. Filtering keeps the current character and Previous/Next order unchanged.',
           writeTitle: 'Write characters', progressLabel: 'Writing progress', nextIncomplete: 'Next unfinished', nextWarning: 'Next review', reviewAndSave: 'Review & save', guideCharacter: 'Guide', autosave: 'Autosaved locally', editCharacters: 'Edit character selection', characters: 'Characters', characterList: 'Character list', canvasLabel: 'Handwriting input', canvasHint: 'Write the character here', undo: 'Undo', redo: 'Redo', clear: 'Clear', penWidth: 'Pen width', previous: 'Previous', next: 'Next', fontPreview: 'Generated font', fontPreviewHelp: 'The generated TTF is reloaded at 12 / 16 / 24 / 48px so each size can be checked.', fontStatusEmpty: 'Write a character to preview the actual font.', fontStatusGenerating: 'Generating the font…', fontStatusReady: 'Previewing the generated TTF.', fontStatusError: 'The font could not be generated. Retry the preview or save an editable backup.', retryFontPreview: 'Retry font preview', qualityUnavailable: 'Glyph check unavailable', qualityUnavailableDetail: 'The font could not be generated, so the sizes have not been checked. Your strokes are preserved.', sizeNotChecked: 'Not checked', needsReview: 'Review', sizeOk: 'OK', sizeAdvisory: 'Reference', sizeWarning: 'Review', sizeChecking: 'Checking', qualitySizesWarning: sizes => `Review at ${sizes}.`, reviewWarnings: 'Review', qualityChecking: 'Checking the glyph…', qualityCheckingDetail: 'The generated font is being checked at 12 / 16 / 24 / 48px.', qualityOk: 'No major issue was found at the checked sizes', qualityAdvisory: '12px is a reference check', qualityWarning: 'The glyph shape may change at small sizes', qualityDetailOk: 'Compared the actual font at 16 / 24px against 48px. The 12px row is informational.', qualityDetailAdvisory: 'Only the 12px rendering loses some detail. This is common at very small text sizes, so it is not counted as a review warning.', qualityDetailGap: 'Separate strokes become unusually tight at 16px. Review the actual font preview.', qualityDetailTopology: 'Parts that are separate, or enclosed spaces visible at 48px, merge or disappear at a smaller size.', qualityDetailBoth: 'The smaller rendering changes shape and separate strokes also become unusually tight.', qualitySummaryOk: 'No glyphs need review', qualitySummaryOkDetail: 'Checked actual font shape mainly at 16 / 24px. The 12px row is informational.', qualitySummaryEmpty: 'No glyph checks yet', qualitySummaryEmptyDetail: 'Checks run automatically after you write a character.', qualitySummaryWarning: count => `${count} glyph(s) need review`,
-          exportTitle: 'Review and save', exportLead: 'Try a sentence using the generated font before saving it.', backToWriting: 'Back to writing', tryFont: 'Try a sentence', tryFontHelp: 'Characters not included in your font fall back to the system font.', reviewPlaceholder: 'Hello from Browser Kitty 2026', completed: 'Completed', remaining: 'Remaining', fontSize: 'TTF size', saveFont: 'Save font', saveFontHelp: 'v1.0.0 exports TrueType (.ttf).', outputFilename: 'Filename', outputFilenameHint: 'The .ttf extension is added automatically.', downloadTtf: 'Save TTF', fontFamily: 'Font name', glyphCount: 'Glyphs', format: 'Format', processing: 'Processing', fullyLocal: 'Fully local',
+          exportTitle: 'Review and save', exportLead: 'Try a sentence using the generated font before saving it.', backToWriting: 'Back to writing', tryFont: 'Try a sentence', tryFontHelp: 'Characters not included in your font fall back to the system font.', reviewPlaceholder: 'Hello from Browser Kitty 2026', completed: 'Completed', remaining: 'Remaining', fontSize: 'TTF size', saveFont: 'Save font', saveFontHelp: 'Exports TrueType (.ttf).', outputFilename: 'Filename', outputFilenameHint: 'The .ttf extension is added automatically.', downloadTtf: 'Save TTF', fontFamily: 'Font name', glyphCount: 'Glyphs', format: 'Format', processing: 'Processing', fullyLocal: 'Fully local',
           buildInfo: 'Build information', appVersion: 'App version', builtAt: 'Built at', dependencies: 'Embedded dependencies', footer: 'Generates the font in your browser',
-          helpBasicsTitle: 'Basic steps', helpStep1: 'Choose a character set or type text under “Add only the characters you need.”', helpStep2: 'On the writing screen, draw with a mouse, finger, or pen while using the faint guide character if helpful. The guide can be turned on or off, and Undo, Redo, and Clear are available.', helpStep3: 'Open “Review & save,” check the actual generated font, then save the TTF.', helpPrivacyTitle: 'Privacy', helpPrivacyBody: 'Handwriting coordinates and font generation stay inside your browser. This app does not send your characters or generated font to an external server.', helpQualityTitle: 'How v1.0.0 converts strokes', helpQualityBody: 'Instead of rasterizing your writing and tracing an image, the app writes TrueType outlines directly from pen coordinates. v1.0.0 shows the generated TTF at 12 / 16 / 24 / 48px and mainly flags actual merging or disappearing details at 16 / 24px compared with 48px. The 12px row is informational. Warnings never modify the glyph automatically.', helpNotesTitle: 'Notes', helpNoteV01: 'v1.0.0 supports TrueType (TTF) export, size-by-size glyph checks, and project save/load. WOFF2, detailed spacing controls, and alternate glyphs are not included.', helpNoteStorage: 'Work is autosaved on this device. v1.0.0 can also explicitly save and load project JSON for backup or moving work between devices.', helpNoteUnicode: 'v1.0.0 supports BMP characters. Some characters such as emoji are outside this range.', helpOffline: 'The release HTML contains the runtime code and does not make external network requests.',
-          unsupported: count => `${count} character(s) are outside the v1.0.0 BMP range, such as some emoji.`, limitReached: `v1.0.0 supports up to ${MAX_CHARS} drawable characters. The first ${MAX_CHARS} are used.`, noCharacters: 'Choose at least one character.', clearedGlyph: 'Cleared this character.', undoAction: 'Undo', restored: 'Restored.', projectReset: 'Started a new project.', newProjectTitle: 'Start a new project?', newProjectMessage: 'This removes the current handwriting and settings from local autosave.', cancel: 'Cancel', reset: 'Reset', downloaded: 'Saved the TTF.', autosaveFailed: 'Local autosave is unavailable. Use Save editable project to back up your work.', restoredProject: 'Restored your previous work.', restoreFailed: 'Saved work could not be loaded, so a clean project was opened.', pointLimit: 'This project reached the point limit. Reselect and clear handwriting you no longer need. Deselecting characters keeps their saved points.'
+          helpBasicsTitle: 'Basic steps', helpStep1: 'Choose a character set or type text under “Add only the characters you need.”', helpStep2: 'On the writing screen, draw with a mouse, finger, or pen while using the faint guide character if helpful. The guide can be turned on or off, and Undo, Redo, and Clear are available.', helpStep3: 'Open “Review & save,” check the actual generated font, then save the TTF.', helpPrivacyTitle: 'Privacy', helpPrivacyBody: 'Handwriting coordinates and font generation stay inside your browser. This app does not send your characters or generated font to an external server.', helpQualityTitle: () => `How v${APP_CONFIG.version} converts strokes`, helpQualityBody: 'Instead of rasterizing your writing and tracing an image, the app writes TrueType outlines directly from pen coordinates. Shows the generated TTF at 12 / 16 / 24 / 48px and mainly flags actual merging or disappearing details at 16 / 24px compared with 48px. The 12px row is informational. Warnings never modify the glyph automatically.', helpNotesTitle: 'Notes', helpNoteFormats: 'Supports TrueType (TTF) export, size-by-size glyph checks, and project save/load. WOFF2, detailed spacing controls, and alternate glyphs are not included.', helpNoteStorage: 'Work is autosaved on this device. You can also explicitly save and load project JSON for backup or moving work between devices.', helpNoteUnicode: 'Supports BMP characters. Some characters such as emoji are outside this range.', helpOffline: 'The release HTML contains the runtime code and does not make external network requests.',
+          unsupported: count => `${count} character(s) are outside the supported BMP range, such as some emoji.`, limitReached: `Supports up to ${MAX_CHARS} drawable characters. The first ${MAX_CHARS} are used.`, noCharacters: 'Choose at least one character.', clearedGlyph: 'Cleared this character.', undoAction: 'Undo', restored: 'Restored.', projectReset: 'Started a new project.', newProjectTitle: 'Start a new project?', newProjectMessage: 'This removes the current handwriting and settings from local autosave.', cancel: 'Cancel', reset: 'Reset', downloaded: 'Saved the TTF.', autosaveFailed: 'Local autosave is unavailable. Use Save editable project to back up your work.', restoredProject: 'Restored your previous work.', restoreFailed: 'Saved work could not be loaded, so a clean project was opened.', pointLimit: 'This project reached the point limit. Reselect and clear handwriting you no longer need. Deselecting characters keeps their saved points.'
         }
       };
 
@@ -877,8 +876,10 @@
       };
       let previewFace = null;
       let generationTimer = 0;
+      let fontWorkerTask = null;
       let activePointer = null;
       let activeStroke = null;
+      let activeDotPatch = null;
       let autosaveTimer = 0;
       let projectGeneration = 0;
       let importGeneration = 0;
@@ -1268,14 +1269,15 @@
         }
         const glyph = getGlyph(char, false);
         for (const stroke of glyph.strokes || []) drawStroke(ctx, stroke);
-        if (activeStroke) drawStroke(ctx, activeStroke);
+        activeDotPatch = null;
+        if (activeStroke) paintActiveInk(0);
       }
       function strokeWidthForPoint(point) {
         const pressure = Number.isFinite(point.p) && point.p > 0 ? Math.max(.15, Math.min(1, point.p)) : .5;
         const pressureScale = point.pen ? .7 + pressure * .6 : 1;
         return state.penWidth * pressureScale;
       }
-      function drawStroke(ctx, stroke) {
+      function drawStroke(ctx, stroke, from = 0) {
         if (!stroke?.points?.length) return;
         const pts = stroke.points;
         ctx.save();
@@ -1287,7 +1289,7 @@
           const r = strokeWidthForPoint(pts[0]) / 2;
           ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, r, 0, Math.PI * 2); ctx.fill();
         } else {
-          for (let i = 1; i < pts.length; i += 1) {
+          for (let i = Math.max(1, from); i < pts.length; i += 1) {
             const a = pts[i - 1]; const b = pts[i];
             ctx.lineWidth = (strokeWidthForPoint(a) + strokeWidthForPoint(b)) / 2;
             ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
@@ -1323,18 +1325,50 @@
         activePointer = event.pointerId;
         activeStrokeOwner = { char: currentChar(), project: projectGeneration };
         activeStroke = { points: [] };
+        // A previous stroke's serialization must not interrupt the next pen gesture.
+        clearTimeout(autosaveTimer); autosaveTimer = 0;
         invalidateClearUndo(currentChar());
-        invalidateFontOutput();
+        invalidateFontOutput(true);
         try { $('#drawCanvas').setPointerCapture(event.pointerId); } catch { /* capture may be unavailable */ }
         maybeAppendPoint(pointFromPointer(event));
-        renderCanvas();
+        paintActiveInk(0);
       }
 
+      function paintActiveInk(from) {
+        if (!activeStroke || from >= activeStroke.points.length) return;
+        const canvas = $('#drawCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(canvas.width / LOGICAL_SIZE, 0, 0, canvas.height / LOGICAL_SIZE, 0, 0);
+        if (activeStroke.points.length === 1) {
+          // Preserve just the pixels beneath the provisional dot. A pen-pressure
+          // change can make the first averaged-width segment narrower than this dot.
+          const point = activeStroke.points[0];
+          const sx = canvas.width / LOGICAL_SIZE, sy = canvas.height / LOGICAL_SIZE;
+          const radius = strokeWidthForPoint(point) / 2;
+          const x = Math.max(0, Math.floor((point.x - radius) * sx) - 2);
+          const y = Math.max(0, Math.floor((point.y - radius) * sy) - 2);
+          const patch = document.createElement('canvas');
+          patch.width = Math.min(canvas.width - x, Math.ceil((point.x + radius) * sx) + 2 - x);
+          patch.height = Math.min(canvas.height - y, Math.ceil((point.y + radius) * sy) + 2 - y);
+          patch.getContext('2d').drawImage(canvas, x, y, patch.width, patch.height, 0, 0, patch.width, patch.height);
+          activeDotPatch = { canvas: patch, x, y };
+        } else if (activeDotPatch) {
+          ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.drawImage(activeDotPatch.canvas, activeDotPatch.x, activeDotPatch.y); ctx.restore();
+          activeDotPatch = null;
+        }
+        // The saved strokes and guide already occupy the canvas. Only new segments
+        // enter this hot path; navigation, resize, and edit boundaries redraw fully.
+        drawStroke(ctx, activeStroke, from);
+      }
       function handlePointerMove(event) {
         if (event.pointerId !== activePointer || !activeStroke) return;
+        const from = activeStroke.points.length;
         const events = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [event];
         for (const item of events) maybeAppendPoint(pointFromPointer(item));
-        renderCanvas();
+        // Some browsers return an empty coalesced list; always retain the dispatched endpoint.
+        maybeAppendPoint(pointFromPointer(event));
+        paintActiveInk(from);
       }
       function finishPointer(event) {
         if (event.pointerId !== activePointer || !activeStroke) return;
@@ -1347,7 +1381,7 @@
         const stroke = activeStroke;
         const owner = activeStrokeOwner;
         const pointer = activePointer;
-        activePointer = null; activeStroke = null; activeStrokeOwner = null;
+        activePointer = null; activeStroke = null; activeStrokeOwner = null; activeDotPatch = null;
         try { $('#drawCanvas').releasePointerCapture(pointer); } catch { /* ignore */ }
         if (stroke.points.length && owner?.project === projectGeneration) {
           const glyph = getGlyph(owner.char);
@@ -1426,7 +1460,7 @@
       }
       function scheduleAutosave() {
         clearTimeout(autosaveTimer);
-        autosaveTimer = setTimeout(saveProject, 180);
+        autosaveTimer = setTimeout(() => { autosaveTimer = 0; if (!activeStroke) saveProject(); }, 180);
       }
       function saveProject() {
         clearTimeout(autosaveTimer); autosaveTimer = 0;
@@ -1601,8 +1635,7 @@
         if (!Number.isFinite(minGap)) return Infinity;
         return minGap * FONT_UNITS_PER_LOGICAL_GAP * pxSize / UPM;
       }
-      function analyzeGlyphQuality(char, glyph) {
-        const geometry = analyzeGeometricGap(glyph);
+      function analyzeGlyphQuality(char, glyph, geometry = analyzeGeometricGap(glyph)) {
         const topologyBySize = Object.create(null);
         for (const size of QUALITY_SIZES) {
           try { topologyBySize[size] = analyzeRenderedTopology(char, size); }
@@ -1639,13 +1672,23 @@
           advisorySizes
         };
       }
-      function analyzeAllGlyphQuality(entries) {
+      async function analyzeAllGlyphQuality(entries, geometry = null, generation = state.fontGeneration) {
         const next = Object.create(null);
-        for (const entry of entries) next[entry.char] = state.quality[entry.char] || analyzeGlyphQuality(entry.char, entry.glyph);
+        let batchStarted = performance.now();
+        for (const entry of entries) {
+          if (performance.now() - batchStarted >= 8) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            batchStarted = performance.now();
+          }
+          if (generation !== state.fontGeneration || activeStroke) return false;
+          next[entry.char] = analyzeGlyphQuality(entry.char, entry.glyph, geometry?.[entry.char]);
+        }
+        if (generation !== state.fontGeneration || activeStroke) return false;
         state.quality = next;
         updateCurrentQualityUi();
         refreshGlyphListState();
         updateExportUi();
+        return true;
       }
       function qualityDetail(result) {
         if (!result) return '';
@@ -2022,6 +2065,67 @@
         return { bytes: font, glyphCount: glyphs.length };
       }
 
+      function fontWorkerSource() {
+        // Serialize the same conversion functions, not a second implementation. The
+        // worker is embedded in this HTML and has no network or document access.
+        const core = { ByteWriter, clampI16, utf16be, checksum, writeU32At, simplifyStroke,
+          logicalToFont, radiusToFont, circleContour, capsuleContour, segmentContours,
+          strokeOutlineContour, orientation, segmentsCross, contourSelfIntersects,
+          polygonArea, contoursForGlyph, buildSimpleGlyph, buildCmap, buildNameTable,
+          isWideGlyphChar, shiftContours, prepareGlyphShape, buildFont,
+          strokeWidthForPoint, pointToSegmentDistance, onSegment, segmentsIntersectInclusive,
+          segmentDistance, logicalRadius, analyzeGeometricGap };
+        return `'use strict'; const UPM = ${UPM}; const APP_CONFIG = ${JSON.stringify({ version: APP_CONFIG.version })};
+          const MIN_MEANINGFUL_GAP_LOGICAL = ${MIN_MEANINGFUL_GAP_LOGICAL}; let state;
+          ${Object.entries(core).map(([name, implementation]) => `const ${name} = ${implementation.toString()};`).join('\n')}
+          onmessage = ({ data }) => {
+            try {
+              state = { penWidth: data.penWidth };
+              const result = buildFont(data.fontName, data.entries);
+              const geometry = Object.create(null);
+              for (const entry of data.entries) geometry[entry.char] = analyzeGeometricGap(entry.glyph);
+              postMessage({ result, geometry }, [result.bytes.buffer]);
+            } catch (error) { postMessage({ error: String(error?.message || error) }); }
+          };`;
+      }
+      function buildPreviewData(fontName, entries, generation) {
+        const fallback = () => new Promise((resolve, reject) => setTimeout(() => {
+          if (generation !== state.fontGeneration || activeStroke) { resolve(null); return; }
+          try {
+            const result = buildFont(fontName, entries);
+            const geometry = Object.create(null);
+            for (const entry of entries) geometry[entry.char] = analyzeGeometricGap(entry.glyph);
+            resolve({ result, geometry });
+          } catch (error) { reject(error); }
+        }, 0));
+        if (typeof Worker !== 'function') return fallback();
+        let worker, url;
+        try {
+          url = URL.createObjectURL(new Blob([fontWorkerSource()], { type: 'text/javascript' }));
+          worker = new Worker(url);
+        } catch {
+          if (url) URL.revokeObjectURL(url);
+          return fallback();
+        }
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          const task = { cancel: () => finish(null) };
+          function finish(value, error = null) {
+            if (settled) return;
+            settled = true; worker.terminate(); URL.revokeObjectURL(url);
+            if (fontWorkerTask === task) fontWorkerTask = null;
+            if (error) reject(error); else resolve(value);
+          }
+          fontWorkerTask = task;
+          worker.onmessage = event => event.data.error ? finish(null, new Error(event.data.error)) : finish(event.data);
+          // Infrastructure startup failures can be asynchronous (e.g. local-file
+          // worker restrictions). Conversion errors use data.error and stay retryable.
+          worker.onerror = event => { event.preventDefault(); finish(fallback()); };
+          try { worker.postMessage({ fontName, entries, penWidth: state.penWidth }); }
+          catch (error) { finish(null, error); }
+        });
+      }
+
       function setFontStatus(mode, messageKey) {
         state.fontStatusMode = mode; state.fontStatusKey = messageKey;
         const root = $('#fontStatus');
@@ -2035,14 +2139,15 @@
         retry.hidden = !canRetry; retry.disabled = !canRetry;
       }
       function hasCurrentFont() { return Boolean(state.previewBytes && state.previewGeneration === state.fontGeneration); }
-      function invalidateFontOutput() {
+      function invalidateFontOutput(deferUi = false) {
         clearTimeout(generationTimer); generationTimer = 0;
+        fontWorkerTask?.cancel();
         state.fontGeneration += 1;
         state.previewBytes = null; state.previewGeneration = null; state.quality = Object.create(null);
         if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } previewFace = null; }
         $('#downloadButton').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true;
         setFontStatus(completedCount() ? 'generating' : '', completedCount() ? 'fontStatusGenerating' : 'fontStatusEmpty');
-        updateCurrentQualityUi(); refreshGlyphListState(); updateExportUi();
+        if (!deferUi) { updateCurrentQualityUi(); refreshGlyphListState(); updateExportUi(); }
         return state.fontGeneration;
       }
 
@@ -2063,12 +2168,15 @@
         await new Promise(resolve => setTimeout(resolve, 0));
         if (generation !== state.fontGeneration || activeStroke) return;
         try {
-          const result = buildFont(fontName, entries);
+          const data = await buildPreviewData(fontName, entries, generation);
+          if (!data || generation !== state.fontGeneration || activeStroke) return;
+          const { result, geometry } = data;
           const face = new FontFace(PREVIEW_FAMILY, result.bytes.buffer.slice(result.bytes.byteOffset, result.bytes.byteOffset + result.bytes.byteLength), { style: 'normal', weight: '400' });
           await face.load();
           if (generation !== state.fontGeneration) return;
           document.fonts.add(face); previewFace = face;
-          analyzeAllGlyphQuality(entries);
+          if (!await analyzeAllGlyphQuality(entries, geometry, generation)) return;
+          if (generation !== state.fontGeneration || activeStroke) return;
           state.previewBytes = result.bytes; state.previewGeneration = generation;
           $('#downloadButton').disabled = false; $('#stepTabExport').disabled = false; $('#mobileTabExport').disabled = false;
           setFontStatus('ready', 'fontStatusReady');

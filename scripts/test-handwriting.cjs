@@ -34,7 +34,7 @@ const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); 
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 function harness(options = {}) {
   let now = 0, nextTimer = 1, nextUrl = 1;
-  const timers = new Map(), faces = [], downloads = [], urls = new Map(), logs = [];
+  const timers = new Map(), faces = [], downloads = [], urls = new Map(), logs = [], workers = [];
   const storage = options.storage || new Map();
   class Target {
     constructor() { this.listeners = new Map(); }
@@ -115,11 +115,22 @@ function harness(options = {}) {
   document.documentElement = document.querySelector('html'); document.body = document.querySelector('body'); document.head = document.querySelector('head'); document.activeElement = document.body;
   const window = new Target(); window.devicePixelRatio = 1;
   const context = { document, window, HTMLElement: Element, HTMLDialogElement: Element, navigator: { language: options.language || 'en' }, Blob, URL: { createObjectURL(blob) { const url = `blob:test-${nextUrl++}`; urls.set(url, blob); return url; }, revokeObjectURL: url => urls.delete(url) }, TextEncoder, TextDecoder, Uint8Array, Uint8ClampedArray, Int32Array, DataView, ArrayBuffer, performance: { now: () => now }, atob: value => Buffer.from(value, 'base64').toString('binary'), console: { error: (...items) => logs.push(items), warn: (...items) => logs.push(items), log: (...items) => logs.push(items) }, setTimeout(callback, delay = 0) { const id = nextTimer++; timers.set(id, { callback, due: now + delay }); return id; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => context.setTimeout(callback, 0), cancelAnimationFrame: id => timers.delete(id), localStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { if (options.storageFails) throw new Error('Storage quota test'); storage.set(key, value); }, removeItem: key => storage.delete(key) }, FontFace: class { constructor(family, bytes) { this.family = family; this.bytes = bytes; this.wait = deferred(); faces.push(this); } load() { return this.wait.promise; } resolve() { this.wait.resolve(this); } reject() { this.wait.reject(new Error('Controlled FontFace load failure')); } } };
+  if (options.worker) context.Worker = class {
+    constructor(url) { if (options.worker === 'constructor-fails') throw new Error('Worker unavailable'); this.url = url; this.source = urls.get(url); this.terminated = false; workers.push(this); }
+    postMessage(data) { this.input = clone(data); }
+    terminate() { this.terminated = true; }
+    async deliver() {
+      const runtime = { Uint8Array, TextEncoder, postMessage: data => this.onmessage({ data }) };
+      vm.createContext(runtime); vm.runInContext(await this.source.text(), runtime); runtime.onmessage({ data: this.input }); await tick();
+    }
+    fail() { this.onmessage({ data: { error: 'Controlled conversion error' } }); }
+    startupFail() { this.onerror({ message: 'Unable to load worker script', preventDefault() {} }); }
+  };
   vm.createContext(context); vm.runInContext(source, context, { filename: htmlPath });
   const read = expression => context.__testAccess(expression);
   const $ = selector => { const element = document.querySelector(selector); assert.ok(element, `Expected control ${selector}`); return element; };
   const run = (name, ...values) => read(name)(...values);
-  const h = { context, state: read('state'), $, run, read, document, window, timers, faces, downloads, logs, storage, clearTimers: () => timers.clear(), async advance(ms = 0) { const end = now + ms; let count = 0; while (true) { const entry = [...timers].filter(([, timer]) => timer.due <= end).sort((a, b) => a[1].due - b[1].due || a[0] - b[0])[0]; if (!entry) break; assert.ok(count++ < 1000, 'Timer loop'); timers.delete(entry[0]); now = entry[1].due; entry[1].callback(); await tick(); } now = end; await tick(); }, pointer(type, properties = {}) { return $('#drawCanvas').dispatch(type, { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, isPrimary: true, clientX: 100, clientY: 100, pressure: .5, ...properties }); }, draw() { h.pointer('pointerdown'); h.pointer('pointermove', { clientX: 200, clientY: 200 }); h.pointer('pointerup', { clientX: 300, clientY: 300, buttons: 0 }); }, async generate() { const before = faces.length; const pending = run('generatePreviewFont'); await h.advance(0); assert.equal(faces.length, before + 1, 'This generation creates a new FontFace'); faces.at(-1).resolve(); await pending; assert.ok(h.state.previewBytes, 'Successful generation yields usable bytes'); return h.state.previewBytes; }, async confirm(pending) { await tick(); assert.equal($('#appConfirmDialog').open, true, 'Expected confirmation'); $('#appConfirmOk').click(); await pending; } };
+  const h = { context, state: read('state'), $, run, read, document, window, timers, faces, downloads, logs, storage, workers, urls, clearTimers: () => timers.clear(), async advance(ms = 0) { const end = now + ms; let count = 0; while (true) { const entry = [...timers].filter(([, timer]) => timer.due <= end).sort((a, b) => a[1].due - b[1].due || a[0] - b[0])[0]; if (!entry) break; assert.ok(count++ < 1000, 'Timer loop'); timers.delete(entry[0]); now = entry[1].due; entry[1].callback(); await tick(); } now = end; await tick(); }, pointer(type, properties = {}) { return $('#drawCanvas').dispatch(type, { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, isPrimary: true, clientX: 100, clientY: 100, pressure: .5, ...properties }); }, draw() { h.pointer('pointerdown'); h.pointer('pointermove', { clientX: 200, clientY: 200 }); h.pointer('pointerup', { clientX: 300, clientY: 300, buttons: 0 }); }, async generate() { const before = faces.length; const pending = run('generatePreviewFont'); await h.advance(0); assert.equal(faces.length, before + 1, 'This generation creates a new FontFace'); faces.at(-1).resolve(); await pending; assert.ok(h.state.previewBytes, 'Successful generation yields usable bytes'); return h.state.previewBytes; }, async confirm(pending) { await tick(); assert.equal($('#appConfirmDialog').open, true, 'Expected confirmation'); $('#appConfirmOk').click(); await pending; } };
   h.clearTimers();
   return h;
 }
@@ -154,7 +165,11 @@ for (const language of ['ja', 'en']) {
     const help = language === 'ja' ? '使い方と注意事項' : 'How to use & notes';
     assert.equal(h.$('#helpButton').getAttribute('aria-label'), help);
     assert.equal(h.$('#helpButton').title, help);
-    assert.equal(h.$('[data-i18n="helpLanguage"]').textContent, language === 'ja' ? 'ヘッダーのENで英語に、JAで日本語に切り替えます。' : 'Use EN in the header to switch to English, or JA to switch to Japanese.');
+    assert.equal(h.document.querySelector('[data-i18n="helpLanguage"]'), null);
+    assert.equal(h.$('[data-i18n="brandMeta"]').textContent, language === 'ja' ? '手書きからTTFフォントを作成' : 'Create TTF fonts from handwriting');
+    assert.ok(h.$('[data-i18n="helpQualityTitle"]').textContent.includes(`v${h.read('APP_CONFIG.version')}`));
+    assert.ok(!h.run('t', 'unsupported', 1).includes('v1.0.0'));
+    for (const element of h.document.querySelectorAll('[data-i18n]')) assert.ok(!element.textContent.includes('v1.0.0'), `Stale version: ${element.getAttribute('data-i18n')}`);
     assert.equal(h.$('[data-i18n="localBadge"]').textContent, language === 'ja' ? '完全ローカル処理' : 'Fully local processing');
     h.$('#helpButton').click(); assert.equal(h.$('#helpDialog').open, true);
     h.$('#closeHelpButton').click(); assert.equal(h.$('#helpDialog').open, false);
@@ -175,6 +190,113 @@ test('Repeated header switches preserve project data and restore the saved langu
     assert.equal(restored.state.language, language);
     assert.equal(restored.$('#languageButton').textContent, language === 'ja' ? 'EN' : 'JA');
   }
+});
+test('A rapid second stroke paints only new ink and postpones autosave', async () => {
+  const h = setup(harness(), ['A'], { A: { strokes: [stroke(2000)], redo: [] } });
+  const ctx = h.$('#drawCanvas').getContext('2d');
+  let segments = 0, clears = 0, guides = 0;
+  ctx.stroke = () => { segments += 1; }; ctx.clearRect = () => { clears += 1; }; ctx.fillText = () => { guides += 1; };
+  h.draw(); await h.advance(50);
+  segments = 0; clears = 0; guides = 0;
+  h.pointer('pointerdown');
+  for (let i = 1; i <= 100; i += 1) h.pointer('pointermove', { clientX: 100 + i * 3, clientY: 100 + i * 3 });
+  assert.equal(clears, 0, 'Do not erase and repaint saved handwriting on each input event');
+  assert.equal(guides, 0, 'The guide is already painted beneath the new ink');
+  assert.equal(segments, 100, 'Each new segment is painted exactly once');
+  await h.advance(150);
+  assert.equal(h.storage.get(h.read('STORAGE_KEY')), undefined, 'No full-project serialization while the pen is down');
+  h.pointer('pointercancel'); await h.advance(180);
+  assert.equal(JSON.parse(h.storage.get(h.read('STORAGE_KEY'))).glyphs.A.strokes.length, 3);
+  assertCounter(h);
+});
+test('Embedded font worker preserves exact geometry and quality-gap calculations', () => {
+  const h = setup(harness());
+  assert.equal(typeof h.read('fontWorkerSource'), 'function', 'The heavy conversion must have a local worker entry point');
+  const messages = [], worker = { postMessage: data => messages.push(data), Date, Uint8Array, TextEncoder };
+  vm.createContext(worker); vm.runInContext(h.run('fontWorkerSource'), worker);
+  const entries = [{ char: 'A', glyph: { strokes: [stroke(9), { points: [point(800, 100), point(800, 900)] }] } }, { char: 'あ', glyph: { strokes: [stroke(1)] } }];
+  const originalNow = Date.now; Date.now = () => 1700000000000; h.read('Date.now = () => 1700000000000');
+  try {
+    worker.onmessage({ data: { fontName: 'Worker parity', entries: clone(entries), penWidth: h.state.penWidth } });
+    assert.equal(messages.length, 1); assert.equal(messages[0].error, undefined);
+    assert.deepEqual(Buffer.from(messages[0].result.bytes), Buffer.from(h.run('buildFont', 'Worker parity', entries).bytes));
+  } finally { Date.now = originalNow; }
+  for (const entry of entries) assert.deepEqual(clone(messages[0].geometry[entry.char]), clone(h.run('analyzeGeometricGap', entry.glyph)));
+});
+test('Empty coalesced input still paints and stores the dispatched pen sample', () => {
+  const h = setup(harness()); h.pointer('pointerdown', { pointerType: 'pen' });
+  h.pointer('pointermove', { pointerType: 'pen', clientX: 250, clientY: 300, pressure: .9, getCoalescedEvents: () => [] });
+  h.pointer('pointercancel');
+  assert.equal(h.state.glyphs.A.strokes[0].points[1].x, 250);
+  assert.equal(h.state.glyphs.A.strokes[0].points[1].p, .9);
+});
+test('Local worker results install only after font loading and release worker resources', async () => {
+  const h = setup(harness({ worker: true }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  const pending = h.run('generatePreviewFont'); await h.advance(0);
+  assert.equal(h.workers.length, 1); assert.equal(h.faces.length, 0); assertInvalid(h);
+  await h.workers[0].deliver();
+  assert.equal(h.workers[0].terminated, true); assert.equal(h.urls.has(h.workers[0].url), false);
+  assert.equal(h.faces.length, 1); assertInvalid(h);
+  h.faces[0].resolve(); await pending;
+  assert.equal(h.state.fontStatusMode, 'ready'); parseTtf(h.state.previewBytes); assert.equal(h.logs.length, 0);
+});
+for (const boundary of ['stroke', 'undo', 'clear', 'reset', 'import']) test(`Pending worker is canceled at ${boundary} and late results cannot restore exports`, async () => {
+  const h = setup(harness({ worker: true }), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] } });
+  const pending = h.run('generatePreviewFont'); await h.advance(0); const worker = h.workers[0];
+  if (boundary === 'stroke') h.pointer('pointerdown');
+  if (boundary === 'undo') h.run('undoCurrent');
+  if (boundary === 'clear') h.run('clearCurrent');
+  if (boundary === 'reset') await h.confirm(h.run('resetProject'));
+  if (boundary === 'import') await h.confirm(h.run('loadProjectFile', file(payload('Empty'))));
+  await pending; assert.equal(worker.terminated, true); assert.equal(h.urls.has(worker.url), false);
+  await worker.deliver(); assert.equal(h.faces.length, 0); assertInvalid(h); assert.deepEqual(Object.keys(h.state.quality), []);
+});
+test('Pending worker keeps character navigation and Clear Undo correctly scoped', async () => {
+  const h = setup(harness({ worker: true }), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] }, B: { strokes: [stroke(2)], redo: [] } });
+  const pending = h.run('generatePreviewFont'); await h.advance(0); const worker = h.workers[0];
+  h.run('selectCharacter', 1); assert.equal(worker.terminated, false);
+  h.run('clearCurrent'); h.$('#appToastAction').click(); assert.equal(h.state.glyphs.B.strokes[0].points.length, 2);
+  await pending; await worker.deliver(); assert.equal(h.faces.length, 0); assertInvalid(h); assertCounter(h);
+  await h.advance(400); await h.workers.at(-1).deliver(); h.faces.at(-1).resolve(); await tick();
+  assert.equal(h.state.currentIndex, 1); assert.ok(h.state.previewBytes); assertCounter(h);
+});
+test('Worker failure is recoverable and constructor failure uses the guarded fallback', async () => {
+  const h = setup(harness({ worker: true }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  const pending = h.run('generatePreviewFont'); await h.advance(0); h.workers[0].fail(); await pending;
+  assert.equal(h.state.fontStatusMode, 'error'); assert.equal(h.$('#retryFontButton').hidden, false); assertInvalid(h);
+  assert.equal(h.workers[0].terminated, true); assert.equal(h.urls.has(h.workers[0].url), false);
+  h.$('#retryFontButton').click(); await h.advance(0); await h.workers.at(-1).deliver(); h.faces.at(-1).resolve(); await tick();
+  assert.equal(h.state.fontStatusMode, 'ready');
+  const fallback = setup(harness({ worker: 'constructor-fails' }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+  await fallback.generate(); assert.equal(fallback.urls.size, 0); parseTtf(fallback.state.previewBytes);
+});
+test('Worker startup errors fall back once and a new stroke cancels pending fallback work', async () => {
+  for (const cancel of [false, true]) {
+    const h = setup(harness({ worker: true }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
+    const pending = h.run('generatePreviewFont'); await h.advance(0); const worker = h.workers[0];
+    worker.startupFail(); assert.equal(worker.terminated, true);
+    if (cancel) h.pointer('pointerdown');
+    await h.advance(0);
+    if (cancel) { await pending; assertInvalid(h); assert.equal(h.faces.length, 0); }
+    else { assert.equal(h.faces.length, 1); h.faces[0].resolve(); await pending; assert.ok(h.state.previewBytes); }
+    assert.equal(h.workers.length, 1); assert.equal(h.urls.has(worker.url), false);
+  }
+});
+test('The provisional pressure dot is restored before the first segment without repainting saved ink', () => {
+  const h = setup(harness()); const ctx = h.$('#drawCanvas').getContext('2d');
+  const operations = []; ctx.arc = () => operations.push('dot'); ctx.drawImage = () => operations.push('restore'); ctx.stroke = () => operations.push('segment');
+  h.pointer('pointerdown', { pointerType: 'pen', pressure: 1 });
+  h.pointer('pointermove', { pointerType: 'pen', pressure: .15, clientX: 300, clientY: 300 });
+  assert.deepEqual(operations, ['dot', 'restore', 'segment']);
+  h.pointer('pointercancel'); assert.equal(h.state.glyphs.A.strokes[0].points[0].p, 1); assert.equal(h.state.glyphs.A.strokes[0].points[1].p, .15);
+});
+test('Yielding rendered-font checks discard a stale batch after new ink begins', async () => {
+  const h = setup(harness(), ['A', 'B'], { A: { strokes: [stroke(3)], redo: [] }, B: { strokes: [stroke(2)], redo: [] } });
+  const pending = h.run('generatePreviewFont'); await h.advance(0);
+  let clock = 0; h.context.performance.now = () => (clock += 9);
+  h.faces.at(-1).resolve(); await tick(); assert.ok(h.timers.size > 0);
+  h.pointer('pointerdown'); await h.advance(0); await pending;
+  assertInvalid(h); assert.deepEqual(Object.keys(h.state.quality), []); assert.equal(h.document.fonts.size, 0);
 });
 test('Initial header markup describes the EN target before runtime localization', () => {
   const button = html.match(/<button\b[^>]*id="languageButton"[^>]*>/)[0];
@@ -244,7 +366,7 @@ for (const boundary of ['setup','help','picker','confirm']) test(`Active stroke 
 for (const type of ['pointercancel','lostpointercapture']) test(`${type} retains captured points without inventing an endpoint`, () => { const h = setup(harness()); h.pointer('pointerdown'); h.pointer('pointermove', { clientX: 220, clientY: 330 }); h.pointer(type, { clientX: 0, clientY: 0 }); h.pointer('pointerup', { clientX: 800 }); const points = h.state.glyphs.A?.strokes[0]?.points; assert.equal(points?.length, 2); assert.equal(points[1].x, 220); assert.equal(points[1].y, 330); assertCounter(h); h.draw(); assert.equal(h.state.glyphs.A.strokes.length, 2, 'Drawing can resume after capture loss'); });
 for (const button of [1,2]) test(`Mouse button ${button} does not create a stroke`, () => { const h = setup(harness()); h.pointer('pointerdown', { button }); h.pointer('pointerup', { button, clientX: 300 }); assert.equal(actualPoints(h.state), 0); });
 test('A secondary pointer cannot start or finish the primary pointer stroke', () => { const h = setup(harness()); h.pointer('pointerdown', { pointerType: 'touch', isPrimary: false, pointerId: 2 }); h.pointer('pointerup', { pointerId: 2 }); assert.equal(actualPoints(h.state), 0); h.pointer('pointerdown', { pointerType: 'pen' }); h.pointer('pointerup', { pointerId: 2, clientX: 400 }); h.pointer('pointermove', { pointerType: 'pen', clientX: 200 }); h.pointer('pointerup', { pointerType: 'pen', clientX: 300 }); assert.equal(h.state.glyphs.A.strokes.length, 1); assert.equal(h.state.glyphs.A.strokes[0].points.length, 3); assert.ok(h.state.glyphs.A.strokes[0].points.every(item => item.pen)); });
-test('Coalesced pen moves and touch strokes retain normal drawing behavior', () => { for (const pointerType of ['pen','touch']) { const h = setup(harness()); h.pointer('pointerdown', { pointerType }); h.pointer('pointermove', { pointerType, getCoalescedEvents: () => [200,300].map(x => ({ pointerType, clientX:x, clientY:100, pressure:.8 })) }); h.pointer('pointerup', { pointerType, clientX: 400 }); assert.equal(h.state.totalPoints, 4); assertCounter(h); } });
+test('Coalesced pen moves and touch strokes retain normal drawing behavior', () => { for (const pointerType of ['pen','touch']) { const h = setup(harness()); h.pointer('pointerdown', { pointerType }); h.pointer('pointermove', { pointerType, clientX: 300, clientY: 100, pressure: .8, getCoalescedEvents: () => [200,300].map(x => ({ pointerType, clientX:x, clientY:100, pressure:.8 })) }); h.pointer('pointerup', { pointerType, clientX: 400 }); assert.equal(h.state.totalPoints, 4); assertCounter(h); } });
 for (const edit of ['stroke-start','undo','redo','clear','pen-width','character-set']) test(`${edit} immediately removes old TTF download readiness`, async () => {
   const h = setup(harness(), ['A','B'], { A: { strokes: [stroke(3)], redo: [] } }); await h.generate();
   if (edit === 'stroke-start') h.pointer('pointerdown');

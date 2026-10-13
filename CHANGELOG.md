@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.4 - 2026-10-13
+
+- Keep all Help content reachable within the actual dialog height, with a fixed Close header on desktop and narrow/short screens.
+- Remove redundant language-switch help, derive the Help version from app metadata, and describe handwriting-to-TTF creation in the header.
+- Paint new pen segments incrementally and postpone automatic project serialization until the active stroke ends.
+- Run the existing TTF and geometric-gap calculations in an embedded local worker; cancel superseded jobs and yield rendered-font checks between short batches. Preserve output geometry, quality criteria, offline operation, and editable-project data.
+- Add regressions for rapid consecutive strokes, coalesced input, worker parity/cancellation/retry/fallback, and interrupted quality checks.
+
 ## 1.0.3 - 2026-10-11
 
 - Prevent background scrolling while Help, a confirmation, or the character list is open.

@@ -1,5 +1,13 @@
 # APP_SPEC.md
 
+## v1.0.4 — Reachable Help and responsive handwriting
+
+- Allocate Help's scrolling body from the dialog's actual remaining height, including its 760px desktop cap, and keep its header/Close button visible.
+- Describe handwriting-to-TTF creation in the header. Remove the redundant language-switch instruction; derive Help's displayed version from app metadata and keep capability descriptions version-independent.
+- Paint newly received pen segments without redrawing saved strokes or the guide on each move. Defer automatic project serialization while a pointer stroke is active; explicit backup and lifecycle flush still commit and save immediately.
+- Run the unchanged TTF writer and geometric-gap checks in an embedded, network-free Blob worker. Cancel obsolete jobs when edits invalidate the generation. If workers are unavailable, use the existing conversion core after a deferred current-generation check and retain all error/retry guards.
+- Yield rendered-font quality checks between small time-bounded batches, reject obsolete batches, and keep exports disabled until the entire current result succeeds. Preserve coordinates, pressure, geometry, quality thresholds, and schema-v1 data.
+
 ## v1.0.3 — Contained modal scrolling
 
 - Lock root and body scrolling while a native modal is open, including Help.
@@ -14,7 +22,7 @@
 ## 1. Product identity
 
 - **Name:** Handwriting Font Maker / 手書きフォントメーカー
-- **Version:** 1.0.3
+- **Version:** 1.0.4
 - **One-sentence purpose:** Write selected characters in the browser and export them as a TrueType font without uploading handwriting data.
 - **Primary users:** People who want a small personal handwriting font for documents, labels, prototypes, or web experiments.
 - **Release artifacts:** `dist/index.html` and `dist/index.self-extract.html`, with the root `handwriting-font-maker.html` generated as an exact readable-download alias
@@ -151,7 +159,7 @@ v1.0.0 is the first formal release. It keeps the dependency-free conversion core
 - Main touch targets are at least about 44 px tall.
 - The drawing area disables touch scrolling only while drawing inside the canvas.
 - Controls have visible labels and accessible names.
-- The header language button displays the target language: `EN` in Japanese and `JA` in English, with matching localized accessible names and tooltips. Help keeps a localized name and tooltip. The Japanese privacy badge reads `完全ローカル処理`.
+- The header language button displays the target language: `EN` in Japanese and `JA` in English, with matching localized accessible names and tooltips. Help keeps a localized name and tooltip. The header tagline describes handwriting-to-TTF creation; the separate Japanese privacy badge reads `完全ローカル処理`.
 - Visible focus styles are required.
 - Reduced-motion preference is respected.
 - Status changes use `aria-live`.
