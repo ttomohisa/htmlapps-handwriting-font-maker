@@ -36,19 +36,19 @@ for (const selector of ['html:has(dialog:modal)', 'body:has(dialog:modal)']) {
     assert.equal(style['overscroll-behavior'], 'none');
   });
 }
-for (const selector of ['.app-confirm-dialog[open]', '.glyph-picker-dialog[open]']) {
+for (const selector of ['.app-confirm-dialog[open]', '.glyph-picker-dialog[open]', '#helpDialog[open]']) {
   test(`${selector} allocates a bounded column for header and scrolling content`, () => {
     const style = declarations(selector);
     assert.equal(style.display, 'flex');
     assert.equal(style['flex-direction'], 'column');
   });
 }
-for (const selector of ['.app-confirm-header', '.glyph-picker-dialog > .dialog-header']) {
+for (const selector of ['.app-confirm-header', '.glyph-picker-dialog > .dialog-header', '#helpDialog > .dialog-header']) {
   test(`${selector} does not shrink its Close control out of view`, () => {
     assert.equal(declarations(selector)['flex-shrink'], '0');
   });
 }
-for (const selector of ['.app-confirm-body', '.glyph-picker-body']) {
+for (const selector of ['.app-confirm-body', '.glyph-picker-body', '.dialog-body']) {
   test(`${selector} can shrink and scroll its last content within the dialog`, () => {
     const style = declarations(selector);
     assert.equal(style.flex, '1 1 auto');
@@ -69,7 +69,7 @@ test('Closed native dialogs stay hidden and the existing Help shell and shield a
     }
   }
   assert.equal(declarations('dialog')['max-height'], 'min(760px, calc(100dvh - 28px))');
-  assert.equal(declarations('.dialog-body')['max-height'], 'calc(100dvh - 102px)');
+  assert.ok([undefined, 'none'].includes(declarations('.dialog-body')['max-height']), 'Help uses the remaining dialog height, not an independent viewport-height body cap');
   assert.equal(declarations('.dialog-body').overflow, 'auto');
   assert.equal(declarations('dialog::backdrop').background, 'rgba(15,17,14,.52)');
   assert.equal(declarations('dialog::backdrop')['backdrop-filter'], 'blur(4px)');

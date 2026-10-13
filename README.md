@@ -18,6 +18,9 @@ The generated TTF is reloaded at 12 / 16 / 24 / 48px for direct inspection. Revi
 
 ## Features
 
+- Responsive pen input paints new ink without replaying earlier strokes. Font conversion and geometric checks use a local worker when available; writing data stays in your browser.
+
+
 - Size-by-size glyph check: compares actual rendered shape at 16 / 24px against 48px; 12px is displayed as an informational reference.
 - Guide character fitted by actual glyph bounds so Japanese, Latin, and digits appear at a consistent visual size.
 - Select hiragana, katakana, uppercase/lowercase Latin, digits, and common symbols

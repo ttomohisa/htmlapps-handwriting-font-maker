@@ -57,7 +57,7 @@ The starter includes the canonical confirmation and toast APIs in the default so
 
 ## Modal layout
 
-Native `dialog:modal` presence locks scrolling on both `html` and `body`, so dismissal releases the lock without additional runtime state. Only open confirmation and glyph-picker dialogs become flex columns. Their headers do not shrink, and their bodies use `min-height: 0`, flexible remaining height, and contained internal scrolling. Confirmation actions stay inside their body; the glyph-picker body contains its filters, grid, and empty state. Existing mobile safe-area padding, the Help shell, backdrop, and dismissal handlers are unchanged. CSS contracts guard this structure; actual native scrolling and viewport bounds require separate browser verification.
+Native `dialog:modal` presence locks scrolling on both `html` and `body`, so dismissal releases the lock without additional runtime state. Open Help, confirmation, and glyph-picker dialogs become flex columns. Their headers do not shrink, and their bodies use `min-height: 0`, flexible remaining height, and contained internal scrolling. Confirmation actions stay inside their body; the glyph-picker body contains its filters, grid, and empty state. The Help body uses remaining dialog space instead of its own viewport-height cap, which previously overflowed the 760px desktop shell. Mobile safe-area padding, the backdrop, and dismissal handlers are preserved. CSS contracts guard this structure; actual native scrolling and viewport bounds require separate browser verification.
 
 ## Handwriting state boundaries
 
@@ -68,6 +68,14 @@ Native `dialog:modal` presence locks scrolling on both `html` and `body`, so dis
 - TTF readiness and editable-project backup are separate concerns. A writing-step backup serializes the existing schema directly and remains available while FontFace generation is pending or failed. Its visible filename input shares the existing output basename and sanitizer, with `.handfont.json` appended for project downloads. Replacement confirmation considers all stored handwriting and active input, including off-list glyphs. Review filtering reuses the existing geometry and quality algorithms; none of these workflow changes alter stroke outlines or quality thresholds.
 
 - Failed preview recovery is a presentation/scheduling concern: the error-only action delegates to `scheduleFontGeneration(0)`, and its synchronous invalidation immediately removes retry availability. Failure explicitly refreshes current-glyph quality UI; an absent result in the error phase is unavailable, not still checking. Neither retry nor unavailable status changes geometry, quality thresholds, or persistent project data.
+
+## Responsive handwriting and preview work
+
+The pointer hot path paints only newly collected segments using the same pressure-width calculation. Full canvas redraws still occur at edit/navigation/resize boundaries. Starting a stroke cancels pending autosave; stroke completion schedules it again. Explicit backup and visibility/pagehide flushes retain their synchronous commit-and-save behavior.
+
+A per-generation Blob worker runs the exact same font writer and geometric-gap functions, serialized from their source definitions. It receives a structured-cloned snapshot of the character entries, pen width, and font name; it transfers the completed TTF buffer back with geometric checks. No script, data, or font leaves the browser, and the existing CSP already permits local Blob workers while keeping `connect-src 'none'`. Invalidation settles the canceled job, terminates its worker, and revokes its Blob URL. Completion and errors release the same resources. Worker construction failure or an unavailable Worker API uses the deferred, revision-guarded original core; that fallback retains correctness but may be slower on unsupported browsers.
+
+FontFace loading and rendered-topology checks stay on the main thread for browser compatibility. Quality checks yield between glyphs once a batch reaches 8ms, retain results locally until the whole current generation passes, and recheck generation/active-stroke guards after every await. Interrupted work cannot install quality, TTF bytes, or export readiness. Conversion formulas and quality thresholds are unchanged.
 
 ## Dependency maintenance lifecycle
 
