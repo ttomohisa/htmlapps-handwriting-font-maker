@@ -1,0 +1,198 @@
+# PR source code must never run on the credential-bearing runner.
+name: Publish and verify PR preview
+'on':
+  workflow_run:
+    workflows:
+    - Deploy PR preview
+    types:
+    - completed
+permissions: {}
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.head_repository.full_name
+      == github.repository
+    outputs:
+      number: ${{ steps.source.outputs.number }}
+      sha: ${{ steps.source.outputs.sha }}
+      ready: ${{ steps.source.outputs.ready }}
+    steps:
+    - name: Checkout immutable trusted workflow revision
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        ref: ${{ github.workflow_sha }}
+        persist-credentials: false
+    - name: Validate source run and current PR
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+      with:
+        script: await require(process.env.GITHUB_WORKSPACE + '/.github/scripts/preview-metadata.cjs')({ github, context, core
+          });
+      id: source
+      env:
+        ALLOWED_BASE_BRANCHES: '["main"]'
+  deploy:
+    needs: resolve
+    if: needs.resolve.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    concurrency:
+      group: cloudflare-pr-preview-${{ needs.resolve.outputs.number }}
+      cancel-in-progress: false
+    outputs:
+      preview_url: ${{ steps.publish.outputs.preview_url }}
+      preview_name: ${{ steps.source.outputs.preview_name }}
+    steps:
+    - name: Checkout immutable trusted workflow revision
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        ref: ${{ github.workflow_sha }}
+        persist-credentials: false
+    - name: Set up Node.js
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: 24
+    - name: Revalidate PR and download its static artifact
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+      with:
+        script: await require(process.env.GITHUB_WORKSPACE + '/.github/scripts/preview-metadata.cjs')({ github, context, core
+          });
+      id: source
+      env:
+        ALLOWED_BASE_BRANCHES: '["main"]'
+        DOWNLOAD_SITE: 'true'
+    - name: Validate and extract static files
+      if: steps.source.outputs.ready == 'true'
+      run: python3 .github/scripts/preview-unpack.py
+    - name: Install trusted deployment tool outside artifact
+      if: steps.source.outputs.ready == 'true'
+      run: |
+        mkdir -p "$RUNNER_TEMP/preview-control"
+        cd "$RUNNER_TEMP/preview-control"
+        npm install --prefix . --ignore-scripts --no-audit --no-fund --package-lock=false wrangler@4.135.0
+    - name: Check Cloudflare credentials
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+      with:
+        script: |-
+          const configured = Boolean(process.env.CLOUDFLARE_API_TOKEN?.trim() && process.env.CLOUDFLARE_ACCOUNT_ID?.trim());
+          core.setOutput('configured', String(configured));
+          if (!configured) core.notice('Preview skipped: Cloudflare credentials are not configured');
+      id: credentials
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      if: steps.source.outputs.ready == 'true'
+    - name: Publish static preview with trusted configuration
+      id: publish
+      if: steps.credentials.outputs.configured == 'true'
+      run: node .github/scripts/preview-command.cjs
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        PREVIEW_NAME: ${{ steps.source.outputs.preview_name }}
+        TRUSTED_MT_WORKER: 'false'
+    - name: Comment preview URL
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+      with:
+        script: |-
+          const {owner, repo} = context.repo;
+          const pull_number = Number(process.env.PR_NUMBER);
+          const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number});
+          if (pr.state !== 'open' || pr.head.sha !== process.env.HEAD_SHA) return;
+          const body = `<!-- browser-kitty-preview -->
+          ## Browser Kitty PR Preview
+
+          [Previewを開く](${process.env.PREVIEW_URL})
+
+          Commit: \`${process.env.HEAD_SHA}\`
+
+          公開後の検証は別の権限を絞ったジョブで実行します。`;
+          const comments = await github.paginate(github.rest.issues.listComments, {owner, repo, issue_number: pull_number, per_page: 100});
+          const old = comments.find(c => c.user.type === 'Bot' && c.body.includes('<!-- browser-kitty-preview -->'));
+          if (old) await github.rest.issues.updateComment({owner, repo, comment_id: old.id, body});
+          else await github.rest.issues.createComment({owner, repo, issue_number: pull_number, body});
+      env:
+        PR_NUMBER: ${{ needs.resolve.outputs.number }}
+        HEAD_SHA: ${{ needs.resolve.outputs.sha }}
+        PREVIEW_URL: ${{ steps.publish.outputs.preview_url }}
+      if: steps.publish.outputs.preview_url != ''
+  verify:
+    needs:
+    - resolve
+    - deploy
+    if: needs.deploy.outputs.preview_url != ''
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout exact PR revision for unprivileged public tests
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        ref: ${{ needs.resolve.outputs.sha }}
+        persist-credentials: false
+    - name: Set up Node.js
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: 24
+    - name: Probe Preview
+      shell: pwsh
+      env:
+        PREVIEW_URL: ${{ needs.deploy.outputs.preview_url }}
+      run: |
+        $lastError = $null
+
+        for ($attempt = 1; $attempt -le 12; $attempt++) {
+          try {
+            $response = Invoke-WebRequest -Uri $env:PREVIEW_URL -MaximumRedirection 5 -TimeoutSec 30
+
+            if ($response.StatusCode -eq 200) {
+              Write-Host "Preview returned HTTP 200."
+              exit 0
+            }
+
+            $lastError = "HTTP $($response.StatusCode)"
+          } catch {
+            $lastError = $_.Exception.Message
+          }
+
+          Write-Host "Preview is not ready yet (attempt $attempt/12): $lastError"
+          Start-Sleep -Seconds 5
+        }
+
+        throw "Preview did not become ready: $lastError"
+  report:
+    needs:
+    - resolve
+    - deploy
+    - verify
+    if: always() && needs.deploy.outputs.preview_url != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      checks: write
+    steps:
+    - name: Attach public test result to the PR commit
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+      with:
+        script: |-
+          const result = process.env.VERIFY_RESULT;
+          const mt = process.env.MT_RESULT;
+          const success = result === 'success' && (!mt || mt === 'success' || mt === 'skipped');
+          await github.rest.checks.create({...context.repo, name: 'PR preview browser tests',
+            head_sha: process.env.HEAD_SHA, status: 'completed', conclusion: success ? 'success' : 'failure',
+            details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            output: {title: success ? 'Public preview checks passed' : 'Public preview checks failed',
+              summary: `Browser/HTTP checks: ${result}; additional MT browser checks: ${mt || 'not configured'}.`}});
+      env:
+        HEAD_SHA: ${{ needs.resolve.outputs.sha }}
+        VERIFY_RESULT: ${{ needs.verify.result }}
+        MT_RESULT: ''
