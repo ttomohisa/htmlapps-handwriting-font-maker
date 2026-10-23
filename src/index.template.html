@@ -343,6 +343,7 @@
       .build-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
+      footer { display: none; }
       :root { --header-height: 58px; }
       body { padding-bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom)); }
       .header-inner { padding-block: 8px; }
@@ -669,16 +670,6 @@
     </section>
     <!-- APP:END -->
 
-    <section class="build-section">
-      <details>
-        <summary data-i18n="buildInfo">ビルド情報</summary>
-        <div class="build-grid">
-          <div class="build-item"><span data-i18n="appVersion">アプリ版数</span><strong id="buildVersion">—</strong></div>
-          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
-          <div class="build-item"><span data-i18n="dependencies">内包依存</span><strong id="dependencyCount">0</strong></div>
-        </div>
-      </details>
-    </section>
   </main>
 
   <footer><span id="footerName">Handwriting Font Maker</span> · MIT License · <span data-i18n="footer">ブラウザ内でフォントを生成します</span></footer>
@@ -759,6 +750,16 @@
       </ul>
       <p class="dialog-note" data-i18n="helpOffline">配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。</p>
       <!-- APP:HELP:END -->
+    <section class="build-section">
+      <details>
+        <summary data-i18n="buildInfo">ビルド情報</summary>
+        <div class="build-grid">
+          <div class="build-item"><span data-i18n="appVersion">アプリ版数</span><strong id="buildVersion">—</strong></div>
+          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
+          <div class="build-item"><span data-i18n="dependencies">内包依存</span><strong id="dependencyCount">0</strong></div>
+        </div>
+      </details>
+    </section>
     </div>
   </dialog>
 
@@ -2388,7 +2389,7 @@
         $('#languageButton').addEventListener('click', () => { state.language = state.language === 'ja' ? 'en' : 'ja'; try { localStorage.setItem(`${STORAGE_KEY}:language`, state.language); } catch { /* ignore */ } applyLanguage(); });
         $('#helpButton').addEventListener('click', () => { finishActiveStroke(); $('#helpDialog').showModal(); });
         $('#closeHelpButton').addEventListener('click', () => $('#helpDialog').close());
-        $('#helpDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
+        $('#helpDialog').addEventListener('click', event => { if (event.target !== event.currentTarget) return; const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
         $('#openGlyphPickerButton').addEventListener('click', () => { finishActiveStroke(); $('#glyphPickerDialog').showModal(); });
         $('#closeGlyphPickerButton').addEventListener('click', () => $('#glyphPickerDialog').close());
         $('#glyphPickerDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });

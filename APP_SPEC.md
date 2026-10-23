@@ -242,3 +242,8 @@ Async font generations use a monotonically increasing generation id invalidated 
 - Validate imported JSON before changing the active project.
 - If handwriting already exists, including retained off-list drawings or an active stroke, ask for confirmation before replacing it.
 - Never upload the project file; reading and writing stay in the browser.
+
+## Shared mobile footer and Help metadata
+
+- Hide only the informational page footer at the existing 520px mobile-workflow breakpoint; preserve functional actions and navigation.
+- Keep the existing metadata block, IDs and population intact as the final Help scroll-body item, available on desktop and mobile.

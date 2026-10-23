@@ -37,7 +37,30 @@ jobs:
         }
     - name: Build and verify standalone HTML
       shell: pwsh
-      run: ./scripts/check-repository.ps1
+      run: |
+        ./scripts/check-repository.ps1
+        node --test tests/mobile-build-info.test.cjs
+        if ($LASTEXITCODE -ne 0) { throw "Mobile build information regression failed." }
+    - name: Verify mobile Help in Chromium
+      shell: pwsh
+      run: |
+        $testTools = Join-Path $env:RUNNER_TEMP "mobile-help-tests"
+        npm install --prefix $testTools --ignore-scripts --no-audit --no-fund --package-lock=false playwright@1.58.2
+        if ($LASTEXITCODE -ne 0) { throw "Playwright installation failed." }
+        $env:NODE_PATH = Join-Path $testTools "node_modules"
+        & (Join-Path $testTools "node_modules/.bin/playwright.cmd") install chromium
+        if ($LASTEXITCODE -ne 0) { throw "Chromium installation failed." }
+        New-Item -ItemType Directory -Force -Path test-results/mobile-help | Out-Null
+        node scripts/mobile-help.browser.cjs 2>&1 | Tee-Object -FilePath test-results/mobile-help/results.log
+        if ($LASTEXITCODE -ne 0) { throw "Mobile Help browser regression failed." }
+    - name: Upload mobile Help browser evidence
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: mobile-help-browser-evidence
+        path: test-results/mobile-help/
+        if-no-files-found: ignore
+        retention-days: 7
     - name: Upload static preview site
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:

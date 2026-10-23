@@ -343,6 +343,7 @@
       .build-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
+      footer { display: none; }
       :root { --header-height: 58px; }
       body { padding-bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom)); }
       .header-inner { padding-block: 8px; }
@@ -669,16 +670,6 @@
     </section>
     <!-- APP:END -->
 
-    <section class="build-section">
-      <details>
-        <summary data-i18n="buildInfo">ビルド情報</summary>
-        <div class="build-grid">
-          <div class="build-item"><span data-i18n="appVersion">アプリ版数</span><strong id="buildVersion">—</strong></div>
-          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
-          <div class="build-item"><span data-i18n="dependencies">内包依存</span><strong id="dependencyCount">0</strong></div>
-        </div>
-      </details>
-    </section>
   </main>
 
   <footer><span id="footerName">Handwriting Font Maker</span> · MIT License · <span data-i18n="footer">ブラウザ内でフォントを生成します</span></footer>
@@ -759,6 +750,16 @@
       </ul>
       <p class="dialog-note" data-i18n="helpOffline">配布HTMLには実行に必要なコードを内包し、実行時の外部通信を行いません。</p>
       <!-- APP:HELP:END -->
+    <section class="build-section">
+      <details>
+        <summary data-i18n="buildInfo">ビルド情報</summary>
+        <div class="build-grid">
+          <div class="build-item"><span data-i18n="appVersion">アプリ版数</span><strong id="buildVersion">—</strong></div>
+          <div class="build-item"><span data-i18n="builtAt">生成日時</span><strong id="builtAt">—</strong></div>
+          <div class="build-item"><span data-i18n="dependencies">内包依存</span><strong id="dependencyCount">0</strong></div>
+        </div>
+      </details>
+    </section>
     </div>
   </dialog>
 
@@ -767,7 +768,7 @@
       'use strict';
 
       const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.4","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
-      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-13T02:11:06.703188Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
+      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-23T11:30:08.8853607Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
       // Asset payloads are Base64 exactly once. The JSON bundle itself is embedded directly.
       const assetBundle = {"schemaVersion":2,"dependencies":{}};
       const blobUrls = new Set();
@@ -2388,7 +2389,7 @@
         $('#languageButton').addEventListener('click', () => { state.language = state.language === 'ja' ? 'en' : 'ja'; try { localStorage.setItem(`${STORAGE_KEY}:language`, state.language); } catch { /* ignore */ } applyLanguage(); });
         $('#helpButton').addEventListener('click', () => { finishActiveStroke(); $('#helpDialog').showModal(); });
         $('#closeHelpButton').addEventListener('click', () => $('#helpDialog').close());
-        $('#helpDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
+        $('#helpDialog').addEventListener('click', event => { if (event.target !== event.currentTarget) return; const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
         $('#openGlyphPickerButton').addEventListener('click', () => { finishActiveStroke(); $('#glyphPickerDialog').showModal(); });
         $('#closeGlyphPickerButton').addEventListener('click', () => $('#glyphPickerDialog').close());
         $('#glyphPickerDialog').addEventListener('click', event => { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });

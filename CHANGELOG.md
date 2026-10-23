@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Hide the informational mobile footer and move the existing build metadata to the end of Help, preserving functional actions and privacy wording.
+
 ## 1.0.4 - 2026-10-13
 
 - Keep all Help content reachable within the actual dialog height, with a fixed Close header on desktop and narrow/short screens.
