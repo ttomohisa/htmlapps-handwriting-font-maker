@@ -51,7 +51,7 @@ if (process.argv.includes('--verify-output')) {
   test('release builds maintain the downloadable readable alias', async t => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'handwriting-packaging-'));
     try {
-      for (const relative of ['build-standalone.ps1', 'app.config.json', 'dependencies.json', 'dependencies.lock.json', 'src', 'scripts']) {
+      for (const relative of ['build-standalone.ps1', 'app.config.json', 'dependencies.json', 'dependencies.lock.json', 'src', 'scripts', 'components']) {
         fs.cpSync(path.join(repositoryRoot, relative), path.join(root, relative), { recursive: true });
       }
 

@@ -1,5 +1,7 @@
 # APP_SPEC.md
 
+Shared UI 1.0.0 adds truthful persistent autosave/delivery recovery, explicit full-project/selected-font scopes, shared language preference and live translated confirmations. Original schema, filenames/extensions and conversion/quality engine are retained. See `docs/common-ui.md`.
+
 ## v1.0.4 — Reachable Help and responsive handwriting
 
 - Allocate Help's scrolling body from the dialog's actual remaining height, including its 760px desktop cap, and keep its header/Close button visible.

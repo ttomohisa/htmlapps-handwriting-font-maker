@@ -54,6 +54,7 @@ function harness(options = {}) {
     setAttribute(name, value) { this.attributes[name] = String(value); if (name === 'id') this.id = String(value); if (name === 'class') this.className = value; if (name.startsWith('data-')) this.dataset[name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = String(value); if (name === 'value') this.value = String(value); if (['disabled', 'hidden', 'checked', 'open'].includes(name)) this[name] = true; }
     getAttribute(name) { if (name === 'class') return this.className; return this.attributes[name] ?? null; }
     hasAttribute(name) { return name in this.attributes; }
+    remove(){if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(x=>x!==this);this.parentElement=null;}
     removeAttribute(name) { delete this.attributes[name]; if (['disabled', 'hidden', 'checked', 'open'].includes(name)) this[name] = false; }
     append(...children) { for (const child of children) { child.parentElement = this; this.children.push(child); } }
     appendChild(child) { this.append(child); return child; }
@@ -114,7 +115,7 @@ function harness(options = {}) {
   }
   document.documentElement = document.querySelector('html'); document.body = document.querySelector('body'); document.head = document.querySelector('head'); document.activeElement = document.body;
   const window = new Target(); window.devicePixelRatio = 1;
-  const context = { document, window, HTMLElement: Element, HTMLDialogElement: Element, navigator: { language: options.language || 'en' }, Blob, URL: { createObjectURL(blob) { const url = `blob:test-${nextUrl++}`; urls.set(url, blob); return url; }, revokeObjectURL: url => urls.delete(url) }, TextEncoder, TextDecoder, Uint8Array, Uint8ClampedArray, Int32Array, DataView, ArrayBuffer, performance: { now: () => now }, atob: value => Buffer.from(value, 'base64').toString('binary'), console: { error: (...items) => logs.push(items), warn: (...items) => logs.push(items), log: (...items) => logs.push(items) }, setTimeout(callback, delay = 0) { const id = nextTimer++; timers.set(id, { callback, due: now + delay }); return id; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => context.setTimeout(callback, 0), cancelAnimationFrame: id => timers.delete(id), localStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { if (options.storageFails) throw new Error('Storage quota test'); storage.set(key, value); }, removeItem: key => storage.delete(key) }, FontFace: class { constructor(family, bytes) { this.family = family; this.bytes = bytes; this.wait = deferred(); faces.push(this); } load() { return this.wait.promise; } resolve() { this.wait.resolve(this); } reject() { this.wait.reject(new Error('Controlled FontFace load failure')); } } };
+  const context = { document, window, HTMLElement: Element, HTMLDialogElement: Element, location:{href:options.url||''},navigator: { languages:options.languages||[options.language||'en'],language: options.language || 'en' }, Blob, URL: Object.assign(class extends URL {}, { createObjectURL(blob) { const url = `blob:test-${nextUrl++}`; urls.set(url, blob); return url; }, revokeObjectURL: url => urls.delete(url) }), TextEncoder, TextDecoder, Uint8Array, Uint8ClampedArray, Int32Array, DataView, ArrayBuffer, performance: { now: () => now }, atob: value => Buffer.from(value, 'base64').toString('binary'), console: { error: (...items) => logs.push(items), warn: (...items) => logs.push(items), log: (...items) => logs.push(items) }, setTimeout(callback, delay = 0) { const id = nextTimer++; timers.set(id, { callback, due: now + delay }); return id; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => context.setTimeout(callback, 0), cancelAnimationFrame: id => timers.delete(id), localStorage: { getItem: key => storage.get(key) ?? null, setItem(key, value) { if (options.storageFails) throw new Error('Storage quota test'); storage.set(key, value); }, removeItem: key => storage.delete(key) }, FontFace: class { constructor(family, bytes) { this.family = family; this.bytes = bytes; this.wait = deferred(); faces.push(this); } load() { return this.wait.promise; } resolve() { this.wait.resolve(this); } reject() { this.wait.reject(new Error('Controlled FontFace load failure')); } } };
   if (options.worker) context.Worker = class {
     constructor(url) { if (options.worker === 'constructor-fails') throw new Error('Worker unavailable'); this.url = url; this.source = urls.get(url); this.terminated = false; workers.push(this); }
     postMessage(data) { this.input = clone(data); }
@@ -126,7 +127,7 @@ function harness(options = {}) {
     fail() { this.onmessage({ data: { error: 'Controlled conversion error' } }); }
     startupFail() { this.onerror({ message: 'Unable to load worker script', preventDefault() {} }); }
   };
-  vm.createContext(context); vm.runInContext(source, context, { filename: htmlPath });
+  vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../components/ui-conventions.js'),'utf8'),context); vm.runInContext(source, context, { filename: htmlPath });
   const read = expression => context.__testAccess(expression);
   const $ = selector => { const element = document.querySelector(selector); assert.ok(element, `Expected control ${selector}`); return element; };
   const run = (name, ...values) => read(name)(...values);
@@ -146,7 +147,7 @@ function familyNames(bytes) {
   return names;
 }
 const cases = [];
-function test(name, fn) { cases.push({ name, fn }); }
+function test(name, fn) { if (!process.env.HANDWRITING_TEST_FILTER || name.includes(process.env.HANDWRITING_TEST_FILTER)) cases.push({ name, fn }); }
 // Header regressions run against the real inline runtime in every release variant.
 for (const language of ['ja', 'en']) {
   test(`${language}: header language button shows the target code`, () => {
@@ -178,7 +179,7 @@ for (const language of ['ja', 'en']) {
 }
 test('Repeated header switches preserve project data and restore the saved language', () => {
   const h = setup(harness({ language: 'ja' }), ['A'], { A: { strokes: [stroke(3)], redo: [] } });
-  const original = captureProject(h), storageKey = `${h.read('STORAGE_KEY')}:language`;
+  const original = captureProject(h), storageKey = 'browser-kitty:ui-language:v1';
   for (const language of ['en', 'ja', 'en', 'ja']) {
     h.$('#languageButton').click();
     assert.equal(h.state.language, language);
@@ -600,5 +601,11 @@ test('Clear before retry starts cancels it and Clear Undo recovers the font', as
   h.$('#appToastAction').click(); await h.advance(400); h.faces.at(-1).resolve(); await tick();
   assert.equal(h.state.fontStatusMode, 'ready'); assert.equal(h.state.totalPoints, 3); parseTtf(h.state.previewBytes);
 });
+
+test('UI autosave failure is persistent and backup does not falsely mark it saved',()=>{const h=setup(harness({storageFails:true}));h.draw();h.run('saveProject');assert.equal(h.$('#projectSaveStatus').getAttribute('data-bk-save-status'),'error');h.$('#saveProjectFileButtonWrite').click();assert.equal(h.downloads.length,1);assert.equal(h.$('#projectSaveStatus').getAttribute('data-bk-save-status'),'error');h.$('#languageButton').click();assert.equal(h.state.totalPoints,3);assert.match(h.$('#projectSaveStatus').textContent,/[\u3040-\u9fff]/);});
+test('UI common language resolution is read-only and autosave leaves legacy language untouched',()=>{const storage=new Map([['browser-kitty:ui-language:v1','ja'],['browser-kitty-handwriting-font-maker-v0.1:language','ja']]),h=harness({storage,url:'https://example.invalid/?lang=en'});assert.equal(h.state.language,'en');assert.equal(storage.get('browser-kitty:ui-language:v1'),'ja');h.run('saveProject');assert.equal(storage.get('browser-kitty-handwriting-font-maker-v0.1:language'),'ja');h.$('#languageButton').click();assert.equal(storage.get('browser-kitty:ui-language:v1'),'ja');});
+test('UI open confirmation stays translated with cancel focus and current work intact',async()=>{const h=setup(harness(),['A'],{A:{strokes:[stroke(3)],redo:[]}}),pending=h.run('resetProject');await h.advance(0);assert.equal(h.document.activeElement,h.$('#appConfirmCancel'));assert.match(h.$('#appConfirmMessage').textContent,/handwriting/);h.$('#languageButton').click();assert.match(h.$('#appConfirmMessage').textContent,/[\u3040-\u9fff]/);h.$('#appConfirmCancel').click();await pending;assert.equal(h.state.totalPoints,3);});
+test('UI download failure persists independently and recovers without changing current font',async()=>{const h=setup(harness(),['A'],{A:{strokes:[stroke(3)],redo:[]}});await h.generate();const bytes=h.state.previewBytes,create=h.document.createElement;h.document.createElement=tag=>{const node=create(tag);if(tag==='a')node.click=()=>{throw Error('blocked')};return node};h.run('downloadFont');await h.advance(10000);assert.match(h.$('#fontDeliveryError').textContent,/retry/i);h.$('#languageButton').click();assert.match(h.$('#fontDeliveryError').textContent,/[\u3040-\u9fff]/);h.document.createElement=create;h.run('downloadFont');assert.equal(h.$('#fontDeliveryError').textContent,'');assert.equal(h.state.previewBytes,bytes);});
+test('UI failed saved-project removal preserves handwriting and language preferences',async()=>{const h=setup(harness(),['A'],{A:{strokes:[stroke(3)],redo:[]}});h.context.localStorage.removeItem=()=>{throw Error('blocked')};await h.confirm(h.run('resetProject'));assert.equal(h.state.totalPoints,3);assert.equal(h.state.glyphs.A.strokes.length,1);assert.match(h.$('#projectOperationError').textContent,/delete|remove/i);});
 
 (async () => { let failed = 0; for (const item of cases) { try { let deadline; try { await Promise.race([item.fn(), new Promise((_, reject) => { deadline = setTimeout(() => reject(new Error('Test did not settle (unanswered async state boundary)')), 4000); })]); } finally { clearTimeout(deadline); } console.log(`ok - ${item.name}`); } catch (error) { failed++; console.error(`not ok - ${item.name}\n  ${String(error.stack).slice(0, 3000)}`); } } console.log(`\n${cases.length - failed}/${cases.length} passed (${path.relative(process.cwd(), htmlPath)}). VM logic and binary checks only; browser/device QA is separate.`); process.exitCode = failed ? 1 : 0; })();

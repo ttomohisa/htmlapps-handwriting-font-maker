@@ -401,6 +401,118 @@
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
     }
   </style>
+  <style>/* Browser Kitty shared UI conventions 1.0.0. Explicit opt-in only. */
+[data-bk-button] { min-height: 44px; border: 1px solid #BFC1BA; background: #FFFFFF; color: #202823; cursor: pointer; opacity: 1; }
+[data-bk-button][data-bk-variant="primary"] { background: #16624F; border-color: #16624F; color: #FFFFFF; }
+[data-bk-button][data-bk-variant="primary"]:hover:not(:disabled) { background: #0E503F; border-color: #0E503F; }
+[data-bk-button][data-bk-variant="secondary"] { background: #FFFFFF; color: #202823; border-color: #BFC1BA; }
+[data-bk-button][data-bk-variant="secondary"]:hover:not(:disabled) { background: #FFFFFF; color: #202823; border-color: #BFC1BA; }
+[data-bk-button][data-bk-variant="danger"] { background: #B3261E; border-color: #B3261E; color: #FFFFFF; }
+[data-bk-button][data-bk-variant="danger"]:hover:not(:disabled) { background: #8C1D18; border-color: #8C1D18; color: #FFFFFF; }
+[data-bk-button]:focus-visible, [data-bk-header-action]:focus-visible { outline: 2px solid #16624F; outline-offset: 2px; }
+[data-bk-button]:disabled, [data-bk-button]:disabled:hover, [data-bk-button]:disabled:active { background: #E7EBE7; color: #59635C; border-color: #E7EBE7; cursor: not-allowed; opacity: 1; transform: none; }
+[data-bk-button][data-bk-state="busy"], [data-bk-button][data-bk-state="stopping"], [data-bk-button][data-bk-state="busy"]:hover, [data-bk-button][data-bk-state="stopping"]:hover { background: #E1F0EA; color: #16624F; border-color: #E1F0EA; cursor: wait; opacity: 1; }
+[data-bk-button][data-bk-state="busy"]::before, [data-bk-button][data-bk-state="stopping"]::before { content: ''; display: inline-block; width: .85em; height: .85em; margin-inline-end: .45em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -.1em; animation: bk-ui-spin .85s linear infinite; }
+[data-bk-header-action] { min-width: 44px; min-height: 44px; }
+[data-bk-save-status] { display: block; font-size: .85rem; color: #59635C; overflow-wrap: anywhere; }
+[data-bk-save-status="error"] { color: #B3261E; }
+@keyframes bk-ui-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { [data-bk-button] { transition: none; } [data-bk-button]::before { animation: none !important; } }
+</style>
+  <script data-bk-ui-version="1.0.0">/* Browser Kitty shared UI conventions 1.0.0. Build-time embed only; no network. */
+(function (root) {
+  'use strict';
+  const version = '1.0.0';
+  const languageKey = 'browser-kitty:ui-language:v1';
+  const validLanguage = value => value === 'ja' || value === 'en';
+  function safely(read, fallback) { try { return read(); } catch (_) { return fallback; } }
+  function dependency(options, key, readDefault, fallback) {
+    return safely(() => Object.prototype.hasOwnProperty.call(options, key) ? options[key] : readDefault(), fallback);
+  }
+  function storageFrom(options) { return dependency(options, 'storage', () => root.localStorage, null); }
+  function urlFrom(options) { return dependency(options, 'url', () => root.location.href, ''); }
+  function parseUrl(value) { return safely(() => new URL(String(value), 'https://browser-kitty.invalid/'), null); }
+  function readLanguage(storage, key) { return safely(() => storage && storage.getItem(key), null); }
+  function resolveLanguage(options = {}) {
+    const url = parseUrl(urlFrom(options));
+    const query = url && url.searchParams.get('lang');
+    if (validLanguage(query)) return query;
+    const storage = storageFrom(options);
+    const shared = readLanguage(storage, languageKey);
+    if (validLanguage(shared)) return shared;
+    for (const key of options.legacyKeys || []) {
+      const legacy = readLanguage(storage, key);
+      if (validLanguage(legacy)) return legacy;
+    }
+    const languages = dependency(options, 'languages', () => root.navigator.languages || [root.navigator.language], []);
+    for (const value of languages || []) {
+      const language = String(value).toLowerCase().split('-')[0];
+      if (validLanguage(language)) return language;
+    }
+    return 'en';
+  }
+  function chooseLanguage(language, options = {}) {
+    if (!validLanguage(language)) throw new TypeError('Unsupported language: ' + language);
+    const storage = storageFrom(options);
+    const persisted = safely(() => { if (!storage) return false; storage.setItem(languageKey, language); return true; }, false);
+    const url = parseUrl(urlFrom(options));
+    const history = dependency(options, 'history', () => root.history, null);
+    const urlUpdated = safely(() => {
+      if (!url || !url.searchParams.has('lang') || !history) return false;
+      url.searchParams.set('lang', language);
+      history.replaceState(history.state, '', url.href);
+      return true;
+    }, false);
+    return { language, persisted, urlUpdated };
+  }
+  const copy = {
+    en: {
+      sessionOnly: 'Your work will be lost when this tab closes',
+      manualSave: 'Your work is not saved automatically. Save a project file to continue editing later.',
+      dirty: 'Unsaved changes', saving: 'Saving…', saved: 'Saved in this browser',
+      saveFailed: 'Could not save in this browser', downloadStarted: 'Download started',
+      previousResult: 'Previous result', stopping: 'Stopping…', stopProcessing: 'Stop processing', cancel: 'Cancel',
+      languageSessionOnly: 'Language applies to this screen only'
+    },
+    ja: {
+      sessionOnly: '作業内容はこのタブを閉じると消えます',
+      manualSave: '自動保存されません。続きの編集には作業ファイルを保存してください',
+      dirty: '未保存の変更があります', saving: '保存しています…', saved: 'このブラウザーに保存済み',
+      saveFailed: 'このブラウザーに保存できませんでした', downloadStarted: '保存を開始しました',
+      previousResult: '前回の結果', stopping: '中止しています…', stopProcessing: '処理を中止', cancel: 'キャンセル',
+      languageSessionOnly: '言語はこの画面だけに適用されます'
+    }
+  };
+  function text(key, language = 'en', values = {}) {
+    const locale = validLanguage(language) ? language : 'en';
+    let value = copy[locale][key] || copy.en[key] || String(key);
+    if (key === 'saved' && values.time) value += (locale === 'ja' ? '・' : ' · ') + String(values.time);
+    return value.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, name) => Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match);
+  }
+  function setButtonState(button, state) {
+    if (!['ready', 'unavailable', 'busy', 'stopping'].includes(state)) throw new TypeError('Unsupported button state: ' + state);
+    button.disabled = state !== 'ready';
+    button.setAttribute('data-bk-state', state);
+    if (state === 'busy' || state === 'stopping') button.setAttribute('aria-busy', 'true');
+    else button.removeAttribute('aria-busy');
+  }
+  function setSaveStatus(element, options = {}) {
+    const mode = options.mode || 'session';
+    const state = options.state || 'dirty';
+    if (!['session', 'manual', 'autosave'].includes(mode)) throw new TypeError('Unsupported save mode: ' + mode);
+    if (!['dirty', 'saving', 'saved', 'error'].includes(state)) throw new TypeError('Unsupported save state: ' + state);
+    const key = mode === 'session' ? 'sessionOnly' : mode === 'manual' ? 'manualSave' : state === 'error' ? 'saveFailed' : state;
+    element.textContent = text(key, options.language, { time: options.time });
+    element.setAttribute('role', 'status');
+    element.setAttribute('aria-live', 'polite');
+    element.setAttribute('data-bk-save-status', state);
+    element.setAttribute('data-bk-save-mode', mode);
+  }
+  const api = Object.freeze({ version, languageKey, resolveLanguage, chooseLanguage, text, setButtonState, setSaveStatus });
+  root.BrowserKittyUI = api;
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof globalThis === 'object' ? globalThis : window);
+</script>
 </head>
 <body>
   <header class="app-header">
@@ -420,15 +532,15 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="language-button" id="languageButton" type="button" aria-label="英語に切り替え" title="英語に切り替え">EN</button>
-        <button class="icon-button header-icon-button" id="helpButton" type="button" data-i18n-title="helpTitle" data-i18n-aria-label="helpTitle" title="使い方と注意事項" aria-label="使い方と注意事項">
+        <button data-bk-header-action  class="language-button" id="languageButton" type="button" aria-label="英語に切り替え" title="英語に切り替え">EN</button>
+        <button data-bk-header-action  class="icon-button header-icon-button" id="helpButton" type="button" data-i18n-title="helpTitle" data-i18n-aria-label="helpTitle" title="使い方と注意事項" aria-label="使い方と注意事項">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.35 2.35 0 1 1 3.72 1.9c-.92.67-1.52 1.12-1.52 2.1"/><path d="M12 17h.01"/></svg>
         </button>
       </div>
     </div>
   </header>
 
-  <main class="main">
+  <main class="main"><div><p id="projectSaveStatus"></p><p id="projectSaveRecovery" role="status" aria-live="polite"></p><button data-bk-button data-bk-variant="secondary" id="retrySaveButton" type="button" data-i18n="retrySave" hidden></button><p id="fontDeliveryError" role="status" aria-live="polite"></p><p id="projectDeliveryError" role="status" aria-live="polite"></p><p id="projectOperationError" role="status" aria-live="polite"></p></div>
     <section class="page-intro" aria-labelledby="heroTitle">
       <div>
         <h1 id="heroTitle" data-i18n="introTitle">書いた文字を、そのままフォントへ</h1>
@@ -454,11 +566,11 @@
           <p data-i18n="setupLead">必要な文字だけ選べます。空白は自動でフォントに含まれます。</p>
         </div>
         <div class="panel-actions">
-          <button class="button" id="loadProjectButtonTop" type="button">
+          <button data-bk-button data-bk-variant="secondary"  class="button" id="loadProjectButtonTop" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 20h14"/></svg>
             <span data-i18n="loadProject">作業データを読み込む</span>
           </button>
-          <button class="button danger" id="newProjectButton" type="button" data-i18n="newProject">新しい作業</button>
+          <button data-bk-button data-bk-variant="danger"  class="button danger" id="newProjectButton" type="button" data-i18n="newProject">新しい作業</button>
         </div>
       </div>
 
@@ -499,7 +611,7 @@
           <div class="selection-count"><strong id="selectedCount">46</strong> <span data-i18n="charactersToWrite">文字を書きます</span></div>
           <div class="selection-note" id="selectionNote" data-i18n="selectionNote">あとから文字セットへ戻って変更できます。</div>
         </div>
-        <button class="button primary" id="startWritingButton" type="button">
+        <button data-bk-button data-bk-variant="primary"  class="button primary" id="startWritingButton" type="button">
           <span data-i18n="startWriting">文字を書き始める</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
         </button>
@@ -514,13 +626,13 @@
           <div class="write-progress-track" id="writeProgressTrack" role="progressbar" data-i18n-aria-label="progressLabel" aria-label="進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="write-progress-fill" id="writeProgressBar"></span></div>
         </div>
         <div class="panel-actions write-panel-actions">
-          <button class="button compact" id="nextIncompleteButton" type="button" hidden>
+          <button data-bk-button data-bk-variant="secondary" class="button compact" id="nextIncompleteButton" type="button" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M9 12h6M13 10l2 2-2 2"/></svg><span data-i18n="nextIncomplete">次の未入力</span>
           </button>
-          <button class="button compact" id="nextWarningButton" type="button" hidden>
+          <button data-bk-button data-bk-variant="secondary" class="button compact" id="nextWarningButton" type="button" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 20h18L12 3Z"/><path d="M12 9v5M12 17h.01"/></svg><span data-i18n="nextWarning">要確認へ</span>
           </button>
-          <button class="button" id="backToSetupButton" type="button" data-i18n="editCharacters">文字を選び直す</button>
+          <button data-bk-button data-bk-variant="secondary"  class="button" id="backToSetupButton" type="button" data-i18n="editCharacters">文字を選び直す</button>
         </div>
       </div>
 
@@ -531,9 +643,9 @@
             <input class="filename-input" id="projectFilenameWrite" type="text" maxlength="120" autocomplete="off" spellcheck="false" value="handwriting-font" aria-describedby="projectFilenameHint">
             <span class="filename-extension" aria-hidden="true">.handfont.json</span>
           </span>
-          <span class="backup-hint" id="projectFilenameHint" data-i18n="backupAnytime">TTF生成中やエラー時も、編集用データを保存できます。</span>
+          <p data-i18n="projectScope"></p><span class="backup-hint" id="projectFilenameHint" data-i18n="backupAnytime">TTF生成中やエラー時も、編集用データを保存できます。</span>
         </label>
-        <button class="button" id="saveProjectFileButtonWrite" type="button" data-i18n="saveEditableProject">編集用データを保存</button>
+        <button data-bk-button data-bk-variant="secondary"  class="button" id="saveProjectFileButtonWrite" type="button" data-i18n="saveEditableProject">編集用データを保存</button>
       </div>
       <div class="write-layout">
         <aside class="glyph-sidebar" aria-label="Characters">
@@ -555,7 +667,7 @@
                 <input id="guideCharacterToggle" type="checkbox" checked>
                 <span data-i18n="guideCharacter">お手本</span>
               </label>
-              <button class="button mobile-glyph-list-button" id="openGlyphPickerButton" type="button" data-i18n="characterList">文字一覧</button>
+              <button data-bk-button data-bk-variant="secondary" class="button mobile-glyph-list-button" id="openGlyphPickerButton" type="button" data-i18n="characterList">文字一覧</button>
             </div>
           </div>
           <div class="canvas-frame">
@@ -563,13 +675,13 @@
             <div class="canvas-hint" id="canvasHint" data-i18n="canvasHint">ここに文字を書いてください</div>
           </div>
           <div class="draw-toolbar">
-            <button class="button tool-button" id="undoButton" type="button" disabled>
+            <button data-bk-button data-bk-variant="secondary"  class="button tool-button" id="undoButton" type="button" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 8 4 12l5 4"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg><span data-i18n="undo">戻す</span>
             </button>
-            <button class="button tool-button danger" id="clearGlyphButton" type="button" disabled>
+            <button data-bk-button data-bk-variant="danger"  class="button tool-button danger" id="clearGlyphButton" type="button" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg><span data-i18n="clear">消去</span>
             </button>
-            <button class="button tool-button" id="redoButton" type="button" disabled>
+            <button data-bk-button data-bk-variant="secondary"  class="button tool-button" id="redoButton" type="button" disabled>
               <span data-i18n="redo">やり直す</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 8 5 4-5 4"/><path d="M19 12h-8a6 6 0 0 0-6 6"/></svg>
             </button>
           </div>
@@ -579,8 +691,8 @@
             <span class="pen-value" id="penWidthValue">56</span>
           </div>
           <div class="nav-row">
-            <button class="button" id="previousCharButton" type="button" disabled><span aria-hidden="true">←</span><span data-i18n="previous">前へ</span></button>
-            <button class="button primary" id="nextCharButton" type="button"><span id="nextCharLabel" data-i18n="next">次へ</span><span aria-hidden="true">→</span></button>
+            <button data-bk-button data-bk-variant="secondary" class="button" id="previousCharButton" type="button" disabled><span aria-hidden="true">←</span><span data-i18n="previous">前へ</span></button>
+            <button data-bk-button data-bk-variant="primary" class="button primary" id="nextCharButton" type="button"><span id="nextCharLabel" data-i18n="next">次へ</span><span aria-hidden="true">→</span></button>
           </div>
         </div>
 
@@ -600,7 +712,7 @@
             <div class="quality-copy"><strong id="qualityResultTitle"></strong><span id="qualityResultDetail"></span></div>
           </div>
           <div class="font-status" id="fontStatus" tabindex="-1" role="status" aria-live="polite"><span class="status-dot"></span><span id="fontStatusText" data-i18n="fontStatusEmpty">文字を書くと実フォントの確認ができます。</span></div>
-          <button class="button retry-font-button" id="retryFontButton" type="button" data-i18n="retryFontPreview" aria-describedby="fontStatusText" hidden disabled>フォント表示を再試行</button>
+          <button data-bk-button data-bk-variant="secondary"  class="button retry-font-button" id="retryFontButton" type="button" data-i18n="retryFontPreview" aria-describedby="fontStatusText" hidden disabled>フォント表示を再試行</button>
         </aside>
       </div>
     </section>
@@ -611,7 +723,7 @@
           <h2 id="exportTitle" data-i18n="exportTitle">確認して保存</h2>
           <p data-i18n="exportLead">生成したフォントで文章を確認してから保存できます。</p>
         </div>
-        <div class="panel-actions"><button class="button" id="backToWriteButton" type="button" data-i18n="backToWriting">文字を書く画面へ</button></div>
+        <div class="panel-actions"><button data-bk-button data-bk-variant="secondary"  class="button" id="backToWriteButton" type="button" data-i18n="backToWriting">文字を書く画面へ</button></div>
       </div>
       <div class="export-layout">
         <div class="review-card">
@@ -627,11 +739,11 @@
           </div>
           <div class="quality-summary" id="qualitySummary">
             <div class="quality-summary-copy"><strong id="qualitySummaryTitle"></strong><span id="qualitySummaryText"></span></div>
-            <button class="button" id="reviewWarningsButton" type="button" data-i18n="reviewWarnings" hidden>確認する</button>
+            <button data-bk-button data-bk-variant="secondary"  class="button" id="reviewWarningsButton" type="button" data-i18n="reviewWarnings" hidden>確認する</button>
           </div>
         </div>
         <div class="export-card">
-          <h3 data-i18n="saveFont">フォントを保存</h3>
+          <p data-i18n="fontScope"></p><h3 data-i18n="saveFont">フォントを保存</h3>
           <p data-i18n="saveFontHelp">TrueType (.ttf) に対応しています。</p>
           <label class="field" for="outputFilename" style="margin-top:14px">
             <span class="field-label" data-i18n="outputFilename">ファイル名</span>
@@ -641,7 +753,7 @@
             </span>
             <span class="sr-only" id="outputFilenameHint" data-i18n="outputFilenameHint">拡張子 .ttf は自動で付きます。</span>
           </label>
-          <button class="button primary export-button" id="downloadButton" type="button" disabled>
+          <button data-bk-button data-bk-variant="primary"  class="button primary export-button" id="downloadButton" type="button" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
             <span data-i18n="downloadTtf">TTFを保存</span>
           </button>
@@ -655,11 +767,11 @@
             <h4 data-i18n="projectData">作業データ</h4>
             <p data-i18n="projectDataHelp">書いた線や設定をJSONとして保存できます。別の端末でも読み込んで続けられます。</p>
             <div class="project-actions">
-              <button class="button" id="saveProjectFileButton" type="button">
+              <button data-bk-button data-bk-variant="secondary"  class="button" id="saveProjectFileButton" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
                 <span data-i18n="saveProjectFile">作業データを保存</span>
               </button>
-              <button class="button" id="loadProjectButtonExport" type="button">
+              <button data-bk-button data-bk-variant="secondary"  class="button" id="loadProjectButtonExport" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 20h14"/></svg>
                 <span data-i18n="loadProject">作業データを読み込む</span>
               </button>
@@ -688,7 +800,7 @@
 
   <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default">
     <span class="app-toast-message" id="appToastMessage"></span>
-    <button class="app-toast-action" id="appToastAction" type="button" hidden></button>
+    <button data-bk-button data-bk-variant="secondary"  class="app-toast-action" id="appToastAction" type="button" hidden></button>
   </div>
 
   <input id="projectFileInput" type="file" accept=".json,.handfont.json,application/json" hidden>
@@ -696,13 +808,13 @@
   <dialog class="app-confirm-dialog" id="appConfirmDialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
     <div class="app-confirm-header">
       <h2 class="app-confirm-title" id="appConfirmTitle">確認</h2>
-      <button class="app-confirm-close" id="appConfirmClose" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button data-bk-button data-bk-variant="secondary"  class="app-confirm-close" id="appConfirmClose" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <div class="app-confirm-body">
       <p class="app-confirm-message" id="appConfirmMessage"></p>
       <div class="app-confirm-actions">
-        <button class="app-confirm-button" id="appConfirmCancel" type="button">キャンセル</button>
-        <button class="app-confirm-button primary" id="appConfirmOk" type="button">実行する</button>
+        <button data-bk-button data-bk-variant="secondary"  class="app-confirm-button" id="appConfirmCancel" type="button">キャンセル</button>
+        <button data-bk-button data-bk-variant="danger"  class="app-confirm-button primary" id="appConfirmOk" type="button">実行する</button>
       </div>
     </div>
   </dialog>
@@ -710,7 +822,7 @@
   <dialog class="glyph-picker-dialog" id="glyphPickerDialog" aria-labelledby="glyphPickerTitle">
     <div class="dialog-header">
       <h2 id="glyphPickerTitle" data-i18n="characterList">文字一覧</h2>
-      <button class="icon-button" id="closeGlyphPickerButton" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button data-bk-header-action class="icon-button" id="closeGlyphPickerButton" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <div class="glyph-picker-body">
       <div class="glyph-filters" id="glyphPickerFilters" role="group" data-i18n-aria-label="filterCharacters" aria-label="文字の絞り込み">
@@ -726,7 +838,7 @@
   <dialog id="helpDialog" aria-labelledby="helpTitle">
     <div class="dialog-header">
       <h2 id="helpTitle" data-i18n="helpTitle">使い方と注意事項</h2>
-      <button class="icon-button" id="closeHelpButton" type="button" data-i18n-title="close" data-i18n-aria-label="close" title="閉じる" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+      <button data-bk-button data-bk-variant="secondary"  class="icon-button" id="closeHelpButton" type="button" data-i18n-title="close" data-i18n-aria-label="close" title="閉じる" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
     <div class="dialog-body">
       <!-- APP:HELP:BEGIN Handwriting Font Maker help. -->
@@ -768,7 +880,7 @@
       'use strict';
 
       const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.4","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
-      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-23T11:30:08.8853607Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
+      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-27T11:42:42.9227556Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
       // Asset payloads are Base64 exactly once. The JSON bundle itself is embedded directly.
       const assetBundle = {"schemaVersion":2,"dependencies":{}};
       const blobUrls = new Set();
@@ -854,6 +966,8 @@
         }
       };
 
+      Object.assign(translations.en,{fontDeliveryFailed:'Could not start font download. Allow downloads and retry Save TTF; current work remains available.',projectDeliveryFailed:'Could not start project download. Allow downloads and retry Save project; current work remains available.',resetFailed:'Could not delete the saved project. Handwriting is retained; retry New project.',retrySave:'Retry save',projectScope:'Autosave and project JSON include the entire editable project, including retained off-list handwriting.',fontScope:'TTF includes drawn characters in the current selection, plus space; off-list handwriting stays in project JSON.',downloaded:'Download started',projectSaved:'Download started'});
+      Object.assign(translations.ja,{fontDeliveryFailed:'フォントの保存を開始できませんでした。ダウンロードを許可し「TTFを保存」を再試行してください。作業は残っています。',projectDeliveryFailed:'作業ファイルの保存を開始できませんでした。ダウンロードを許可し「作業を保存」を再試行してください。作業は残っています。',resetFailed:'保存済み作業を削除できませんでした。手書きは残っています。「新しい作業」を再試行してください。',retrySave:'保存を再試行',projectScope:'自動保存と作業JSONは、選択外の手書きも含む編集可能な作業全体を保存します。',fontScope:'TTFは現在の選択中で手書き済みの文字と空白を含みます。選択外の手書きは作業JSONに残ります。',downloaded:'保存を開始しました',projectSaved:'保存を開始しました'});
       const state = {
         language: detectLanguage(),
         step: 'setup',
@@ -873,7 +987,7 @@
         fontStatusMode: '',
         glyphFilter: 'all',
         totalPoints: 0,
-        saveWarned: false
+        saveWarned: false, saveState: 'dirty', savedAt: '', fontDeliveryError: false, projectDeliveryError: false, operationError: ''
       };
       let previewFace = null;
       let generationTimer = 0;
@@ -888,14 +1002,7 @@
       let clearUndoToken = null;
       const glyphRevisions = new Map();
 
-      function detectLanguage() {
-        if (APP_CONFIG.defaultLanguage === 'ja' || APP_CONFIG.defaultLanguage === 'en') return APP_CONFIG.defaultLanguage;
-        try {
-          const saved = localStorage.getItem(`${STORAGE_KEY}:language`);
-          if (saved === 'ja' || saved === 'en') return saved;
-        } catch { /* ignore */ }
-        return (navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en';
-      }
+      function detectLanguage() { return BrowserKittyUI.resolveLanguage({legacyKeys:[`${STORAGE_KEY}:language`]}); }
       function t(key, ...args) {
         const value = translations[state.language]?.[key] ?? translations.en[key] ?? key;
         return typeof value === 'function' ? value(...args) : value;
@@ -971,7 +1078,8 @@
         const cancelButton = $('#appConfirmCancel');
         const okButton = $('#appConfirmOk');
         let resolver = null;
-        let restoreFocus = null;
+        let restoreFocus = null, localize=null;
+        function refresh(){if(!dialog.open||!localize)return;const c=localize();title.textContent=c.title;message.textContent=typeof c.message==='function'?c.message():c.message;cancelButton.textContent=c.cancelLabel;okButton.textContent=c.confirmLabel}
         function finish(result) {
           if (!dialog.open) return;
           const currentResolver = resolver;
@@ -981,13 +1089,15 @@
           restoreFocus = null;
           if (currentResolver) currentResolver(result);
         }
-        function ask({ title: heading, message: body, confirmLabel, cancelLabel, tone = 'default' } = {}) {
+        function ask(options = {}) {
+          localize=options.localize||null;const {title:heading,message:body,confirmLabel,cancelLabel,tone='default'}=localize?localize():options;
           finishActiveStroke();
           if (dialog.open) finish(false);
           title.textContent = heading || '';
-          message.textContent = body || '';
+          message.textContent = typeof body === 'function' ? body() : body || '';
           cancelButton.textContent = cancelLabel || t('cancel');
           okButton.textContent = confirmLabel || t('reset');
+          okButton.setAttribute('data-bk-variant',tone==='danger'?'danger':'primary');
           okButton.classList.toggle('danger', tone === 'danger');
           okButton.classList.toggle('primary', tone !== 'danger');
           restoreFocus = document.activeElement;
@@ -998,7 +1108,7 @@
         okButton.addEventListener('click', () => finish(true));
         dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
         dialog.addEventListener('click', event => { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) finish(false); });
-        return Object.freeze({ ask });
+        return Object.freeze({ ask,refresh });
       })();
       window.AppConfirm = AppConfirm;
 
@@ -1008,13 +1118,15 @@
         const message = $('#appToastMessage');
         const action = $('#appToastAction');
         let timer = 0;
-        let actionHandler = null;
+        let actionHandler = null, messageSource=null;
+        function refresh(){if(typeof messageSource==='function')message.textContent=messageSource();if(actionHandler)action.textContent=t('undoAction')}
         function dismiss() { clearTimeout(timer); timer = 0; root.classList.remove('show'); actionHandler = null; }
         function show({ message: text = '', actionLabel = '', onAction = null, duration = 3200 } = {}) {
-          clearTimeout(timer); message.textContent = String(text); actionHandler = typeof onAction === 'function' ? onAction : null; action.textContent = actionLabel || ''; action.hidden = !actionHandler || !actionLabel; root.classList.add('show'); if (duration > 0) timer = setTimeout(dismiss, duration); return Object.freeze({ dismiss });
+          clearTimeout(timer);messageSource=text; message.textContent = String(typeof text==='function'?text():text); actionHandler = typeof onAction === 'function' ? onAction : null; action.textContent = actionLabel || ''; action.hidden = !actionHandler || !actionLabel; root.classList.add('show'); if (duration > 0) timer = setTimeout(dismiss, duration); return Object.freeze({ dismiss });
         }
+        root.addEventListener('focusin',()=>clearTimeout(timer));root.addEventListener('focusout',()=>{timer=setTimeout(dismiss,5000)});
         action.addEventListener('click', () => { const handler = actionHandler; dismiss(); if (handler) handler(); });
-        return Object.freeze({ show, dismiss });
+        return Object.freeze({ show, dismiss, refresh });
       })();
       window.AppToast = AppToast;
 
@@ -1035,6 +1147,7 @@
         updateWritingUi();
         updateExportUi();
         setFontStatus(state.fontStatusMode, state.fontStatusKey);
+        renderPersistenceStatus(); AppConfirm.refresh(); AppToast.refresh();
       }
 
       function setStep(step) {
@@ -1053,9 +1166,9 @@
       function startWriting() {
         finishActiveStroke();
         const selected = updateSelectionSummary();
-        if (!selected.chars.length) { AppToast.show({ message: t('noCharacters') }); return; }
+        if (!selected.chars.length) { AppToast.show({ message: () => t('noCharacters') }); return; }
         const retained = Object.keys(state.glyphs).filter(char => state.glyphs[char].strokes?.length);
-        if (new Set([...selected.chars, ...retained]).size > MAX_CHARS) { AppToast.show({ message: t('retainedCharacterLimit'), duration: 6500 }); return; }
+        if (new Set([...selected.chars, ...retained]).size > MAX_CHARS) { AppToast.show({ message: () => t('retainedCharacterLimit'), duration: 6500 }); return; }
         const previousChar = currentChar();
         invalidateClearUndo();
         state.chars = selected.chars;
@@ -1313,7 +1426,7 @@
           if (dx * dx + dy * dy < 2.25) return;
         }
         if (state.totalPoints + activeStroke.points.length >= MAX_POINTS) {
-          AppToast.show({ message: t('pointLimit'), duration: 5200 });
+          AppToast.show({ message: () => t('pointLimit'), duration: 5200 });
           return;
         }
         activeStroke.points.push(point);
@@ -1322,7 +1435,7 @@
         if (activePointer !== null || !currentChar() || state.step !== 'write' || document.querySelector('dialog[open]')) return;
         if (event.button !== undefined && event.button !== 0) return;
         if (event.isPrimary === false) return;
-        if (state.totalPoints >= MAX_POINTS) { AppToast.show({ message: t('pointLimit'), duration: 5200 }); return; }
+        if (state.totalPoints >= MAX_POINTS) { AppToast.show({ message: () => t('pointLimit'), duration: 5200 }); return; }
         activePointer = event.pointerId;
         activeStrokeOwner = { char: currentChar(), project: projectGeneration };
         activeStroke = { points: [] };
@@ -1414,7 +1527,7 @@
         const glyph = getGlyph(currentChar());
         if (!glyph.redo.length) return;
         const stroke = glyph.redo[glyph.redo.length - 1];
-        if (state.totalPoints + stroke.points.length > MAX_POINTS) { AppToast.show({ message: t('pointLimit'), duration: 5200 }); return; }
+        if (state.totalPoints + stroke.points.length > MAX_POINTS) { AppToast.show({ message: () => t('pointLimit'), duration: 5200 }); return; }
         glyph.redo.pop(); glyph.strokes.push(stroke);
         state.totalPoints += stroke.points.length;
         afterGlyphEdit();
@@ -1432,14 +1545,14 @@
         afterGlyphEdit(char);
         const token = { char, project: projectGeneration, glyph, revision: glyphRevisions.get(char) };
         clearUndoToken = token;
-        AppToast.show({ message: t('clearedGlyph'), actionLabel: t('undoAction'), duration: 5000, onAction: () => {
+        AppToast.show({ message: () => t('clearedGlyph'), actionLabel: t('undoAction'), duration: 5000, onAction: () => {
           if (clearUndoToken !== token || token.project !== projectGeneration || state.glyphs[char] !== glyph || glyphRevisions.get(char) !== token.revision || glyph.strokes.length) return;
           finishActiveStroke();
           if (clearUndoToken !== token) return;
-          if (state.totalPoints + removedPoints > MAX_POINTS) { AppToast.show({ message: t('pointLimit'), duration: 5200 }); return; }
+          if (state.totalPoints + removedPoints > MAX_POINTS) { AppToast.show({ message: () => t('pointLimit'), duration: 5200 }); return; }
           glyph.strokes = before; glyph.redo = []; state.totalPoints += removedPoints;
           afterGlyphEdit(char);
-          AppToast.show({ message: t('restored') });
+          AppToast.show({ message: () => t('restored') });
         } });
       }
 
@@ -1459,25 +1572,36 @@
           penWidth: state.penWidth, guideCharacter: state.guideCharacter, glyphs: serializableGlyphs, step: state.step
         };
       }
+      function renderPersistenceStatus() {
+        BrowserKittyUI.setSaveStatus($('#projectSaveStatus'),{mode:'autosave',state:state.saveState,language:state.language,time:state.savedAt?new Date(state.savedAt).toLocaleTimeString(state.language):''});
+        $('#retrySaveButton').hidden=state.saveState!=='error';
+        $('#projectSaveRecovery').textContent=state.saveState==='error'?t('autosaveFailed'):'';
+        $('#fontDeliveryError').textContent=state.fontDeliveryError?t('fontDeliveryFailed'):'';
+        $('#projectDeliveryError').textContent=state.projectDeliveryError?t('projectDeliveryFailed'):'';
+        $('#projectOperationError').textContent=state.operationError?t(state.operationError):'';
+      }
       function scheduleAutosave() {
+        state.saveState='dirty'; renderPersistenceStatus();
         clearTimeout(autosaveTimer);
         autosaveTimer = setTimeout(() => { autosaveTimer = 0; if (!activeStroke) saveProject(); }, 180);
       }
       function saveProject() {
         clearTimeout(autosaveTimer); autosaveTimer = 0;
         const payload = serializeProjectPayload();
+        state.saveState='saving';renderPersistenceStatus();
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-          localStorage.setItem(`${STORAGE_KEY}:language`, state.language);
+          state.saveState='saved'; state.savedAt=payload.savedAt;
         } catch {
-          if (!state.saveWarned) { state.saveWarned = true; AppToast.show({ message: t('autosaveFailed'), duration: 5200 }); }
+          state.saveState='error';
         }
+        renderPersistenceStatus();
       }
       function restoreProject() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (!raw) return false;
-          const imported = normalizeImportedProject(JSON.parse(raw));
+          const parsed=JSON.parse(raw), imported = normalizeImportedProject(parsed);
           state.fontName = imported.fontName;
           state.customText = imported.customText;
           state.selectedSets = imported.selectedSets;
@@ -1489,11 +1613,11 @@
           state.totalPoints = imported.totalPoints;
           state.quality = Object.create(null);
           state.previewBytes = null;
-          state.step = imported.step;
+          state.step = imported.step; state.saveState='saved';state.savedAt=parsed.savedAt||'';
           return true;
         } catch {
           try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-          setTimeout(() => AppToast.show({ message: t('restoreFailed'), duration: 4800 }), 0);
+          setTimeout(() => AppToast.show({ message: () => t('restoreFailed'), duration: 4800 }), 0);
           return false;
         }
       }
@@ -2235,15 +2359,14 @@
         syncFilenameInputs(base);
         return base;
       }
+      function deliverFile(blob,filename,kind){
+        let url,anchor;try{url=URL.createObjectURL(blob);anchor=document.createElement('a');anchor.href=url;anchor.download=filename;document.body.appendChild(anchor);anchor.click();state[kind+'DeliveryError']=false;renderPersistenceStatus();AppToast.show({message:()=>BrowserKittyUI.text('downloadStarted',state.language)});return true}
+        catch{state[kind+'DeliveryError']=true;renderPersistenceStatus();return false}
+        finally{if(anchor)anchor.remove();if(url)setTimeout(()=>URL.revokeObjectURL(url),1000)}
+      }
       function downloadFont() {
-        finishActiveStroke();
-        if (!hasCurrentFont()) return;
-        const blob = new Blob([state.previewBytes], { type: 'font/ttf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `${normalizedFilenameBase()}.ttf`; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
-        AppToast.show({ message: t('downloaded') });
+        finishActiveStroke();if(!hasCurrentFont())return;
+        deliverFile(new Blob([state.previewBytes],{type:'font/ttf'}),normalizedFilenameBase()+'.ttf','font');
       }
 
       function projectFilenameBase() {
@@ -2252,17 +2375,7 @@
         syncFilenameInputs(base);
         return base;
       }
-      function downloadProjectFile() {
-        finishActiveStroke();
-        saveProject();
-        const payload = serializeProjectPayload();
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `${projectFilenameBase()}.handfont.json`; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
-        AppToast.show({ message: t('projectSaved') });
-      }
+      function downloadProjectFile(){finishActiveStroke();saveProject();const payload=serializeProjectPayload();deliverFile(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),projectFilenameBase()+'.handfont.json','project');}
       function isSupportedProjectChar(char) {
         if (typeof char !== 'string' || [...char].length !== 1 || /\s/u.test(char)) return false;
         const code = char.codePointAt(0);
@@ -2341,7 +2454,7 @@
           const imported = normalizeImportedProject(parsed);
           finishActiveStroke();
           if (state.totalPoints > 0) {
-            const ok = await AppConfirm.ask({ title: t('projectLoadConfirmTitle'), message: t('projectLoadConfirmMessage'), confirmLabel: t('projectLoadConfirm'), cancelLabel: t('cancel'), tone: 'danger' });
+            const ok = await AppConfirm.ask({localize:()=>({ title: t('projectLoadConfirmTitle'), message: () => t('projectLoadConfirmMessage'), confirmLabel: t('projectLoadConfirm'), cancelLabel: t('cancel'), tone: 'danger' })});
             if (!ok || intent !== importGeneration) return;
           }
           replaceProjectSource();
@@ -2351,11 +2464,11 @@
           $('#stepTabWrite').disabled = false; $('#mobileTabWrite').disabled = false;
           setStep(imported.step === 'setup' ? 'setup' : 'write'); saveProject();
           scheduleFontGeneration(0);
-          AppToast.show({ message: t('projectLoaded') });
+          state.operationError='';renderPersistenceStatus();AppToast.show({ message: () => t('projectLoaded') });
         } catch (error) {
           if (intent !== importGeneration) return;
           console.warn(error);
-          AppToast.show({ message: t('projectLoadFailed'), duration: 5600 });
+          state.operationError='projectLoadFailed';renderPersistenceStatus();
         } finally {
           if (intent === importGeneration) $('#projectFileInput').value = '';
         }
@@ -2373,20 +2486,20 @@
       async function resetProject() {
         finishActiveStroke();
         const intent = ++importGeneration;
-        const ok = await AppConfirm.ask({ title: t('newProjectTitle'), message: t('newProjectMessage'), confirmLabel: t('reset'), cancelLabel: t('cancel'), tone: 'danger' });
+        const ok = await AppConfirm.ask({localize:()=>({ title: t('newProjectTitle'), message: () => t('newProjectMessage'), confirmLabel: t('reset'), cancelLabel: t('cancel'), tone: 'danger' })});
         if (!ok || intent !== importGeneration) return;
-        replaceProjectSource();
-        try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+        try { localStorage.removeItem(STORAGE_KEY); } catch { state.operationError='resetFailed';renderPersistenceStatus();return; }
+        state.operationError='';replaceProjectSource();
         state.fontName = 'My Handwriting'; state.customText = ''; state.selectedSets = { hiragana: true, katakana: false, upper: false, lower: false, digits: false, symbols: false };
         state.chars = [...characterSets.hiragana]; state.currentIndex = 0; state.penWidth = 56; state.guideCharacter = true; state.glyphs = Object.create(null); state.quality = Object.create(null); state.previewBytes = null; state.totalPoints = 0; state.step = 'setup';
         if (previewFace) { try { document.fonts.delete(previewFace); } catch { /* ignore */ } previewFace = null; }
         syncSetupInputs(); $('#guideCharacterToggle').checked = state.guideCharacter; updateSelectionSummary(); rebuildGlyphLists(); updateWritingUi(); updateExportUi(); renderCanvas();
         $('#stepTabWrite').disabled = true; $('#mobileTabWrite').disabled = true; $('#stepTabExport').disabled = true; $('#mobileTabExport').disabled = true; $('#downloadButton').disabled = true;
-        setFontStatus('', 'fontStatusEmpty'); setStep('setup'); AppToast.show({ message: t('projectReset') });
+        setFontStatus('', 'fontStatusEmpty'); setStep('setup'); AppToast.show({ message: () => t('projectReset') });
       }
 
       function bindEvents() {
-        $('#languageButton').addEventListener('click', () => { state.language = state.language === 'ja' ? 'en' : 'ja'; try { localStorage.setItem(`${STORAGE_KEY}:language`, state.language); } catch { /* ignore */ } applyLanguage(); });
+        $('#languageButton').addEventListener('click', () => { state.language = state.language === 'ja' ? 'en' : 'ja'; const choice=BrowserKittyUI.chooseLanguage(state.language);applyLanguage();if(!choice.persisted)AppToast.show({message:BrowserKittyUI.text('languageSessionOnly',state.language)}); });
         $('#helpButton').addEventListener('click', () => { finishActiveStroke(); $('#helpDialog').showModal(); });
         $('#closeHelpButton').addEventListener('click', () => $('#helpDialog').close());
         $('#helpDialog').addEventListener('click', event => { if (event.target !== event.currentTarget) return; const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close(); });
@@ -2399,6 +2512,7 @@
         $('#newProjectButton').addEventListener('click', resetProject);
         $('#loadProjectButtonTop').addEventListener('click', openProjectFilePicker);
         $('#loadProjectButtonExport').addEventListener('click', openProjectFilePicker);
+        $('#retrySaveButton').addEventListener('click',()=>{finishActiveStroke();saveProject()});
         $('#saveProjectFileButton').addEventListener('click', downloadProjectFile);
         $('#saveProjectFileButtonWrite').addEventListener('click', downloadProjectFile);
         $('#projectFileInput').addEventListener('change', event => { const file = event.target.files?.[0]; if (file) loadProjectFile(file); });
@@ -2462,7 +2576,7 @@
         if (state.chars.length && restored) { $('#stepTabWrite').disabled = false; $('#mobileTabWrite').disabled = false; }
         if (restored && completedCount()) scheduleFontGeneration(0);
         setStep(restored && state.step === 'write' ? 'write' : 'setup');
-        if (restored) setTimeout(() => AppToast.show({ message: t('restoredProject') }), 200);
+        if (restored) setTimeout(() => AppToast.show({ message: () => t('restoredProject') }), 200);
       }
 
       // Lightweight regression hooks for local/headless verification; not exposed in normal UI.
