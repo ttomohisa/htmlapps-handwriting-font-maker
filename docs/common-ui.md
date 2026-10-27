@@ -10,4 +10,6 @@ New project validates storage removal before replacing current work; removal fai
 
 Language resolves URL, common key, original scalar preference, supported browser languages and English. Startup never writes a common language or changes the legacy key. Explicit switching alone chooses the common preference and shows a screen-only notice if unavailable. Title/lang/ARIA/help/status/dialog/toast translation preserves handwriting, selection, filenames, worker jobs and generated font bytes.
 
+Selection-summary rendering is separate from input mutation and autosave scheduling. Language switching only renders that summary, so it cannot mark a failed save dirty, hide Retry/recovery or enqueue another project write before a successful retry.
+
 Run `scripts/check-repository.ps1` for all three runtime variants, unchanged TTF/worker/quality tests, modal layout contracts and packaging parity. Native drawing latency, physical input, FontFace rasterization, touch layout, modal keyboard behavior and actual downloads remain human acceptance. Glyph/filter/step selection controls preserve domain styles; executable actions opt into shared variants.

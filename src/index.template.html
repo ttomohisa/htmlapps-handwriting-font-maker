@@ -947,6 +947,11 @@
           hiragana: $('#setHiragana').checked, katakana: $('#setKatakana').checked, upper: $('#setUpper').checked,
           lower: $('#setLower').checked, digits: $('#setDigits').checked, symbols: $('#setSymbols').checked
         };
+        const selected = renderSelectionSummary();
+        scheduleAutosave();
+        return selected;
+      }
+      function renderSelectionSummary() {
         const selected = computeSelectedChars();
         $('#selectedCount').textContent = formatNumber(selected.chars.length);
         const warning = $('#unsupportedWarning');
@@ -955,7 +960,6 @@
         if (selected.truncated) messages.push(t('limitReached'));
         warning.hidden = messages.length === 0;
         $('#unsupportedWarningText').textContent = messages.join(' ');
-        scheduleAutosave();
         return selected;
       }
 
@@ -1033,7 +1037,7 @@
         document.title = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#brandName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#footerName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
-        updateSelectionSummary();
+        renderSelectionSummary();
         updateWritingUi();
         updateExportUi();
         setFontStatus(state.fontStatusMode, state.fontStatusKey);

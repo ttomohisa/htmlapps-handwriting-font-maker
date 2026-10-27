@@ -880,7 +880,7 @@
       'use strict';
 
       const APP_CONFIG = {"$schema":"./schemas/app-config.schema.json","name":"Handwriting Font Maker","nameJa":"手書きフォントメーカー","slug":"handwriting-font-maker","version":"1.0.4","description":"Create a TrueType font from handwriting directly in the browser.","descriptionJa":"ブラウザ上で書いた文字からTrueTypeフォントを作成します。","defaultLanguage":"auto","repository":{"owner":"ttomohisa","name":"htmlapps-handwriting-font-maker"},"build":{"output":"dist/index.html","blockRuntimeNetwork":true,"selfExtract":{"enabled":true,"output":"dist/index.self-extract.html"},"sizeBudget":{"readableWarningMb":25,"selfExtractWarningMb":12}}};
-      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-27T11:42:42.9227556Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
+      const BUILD_MANIFEST = {"schemaVersion":2,"builder":"single-html-app-template/1.2","generatedAtUtc":"2026-10-27T11:50:46.8464696Z","app":{"name":"Handwriting Font Maker","slug":"handwriting-font-maker","version":"1.0.4"},"dependencies":[]};
       // Asset payloads are Base64 exactly once. The JSON bundle itself is embedded directly.
       const assetBundle = {"schemaVersion":2,"dependencies":{}};
       const blobUrls = new Set();
@@ -1057,6 +1057,11 @@
           hiragana: $('#setHiragana').checked, katakana: $('#setKatakana').checked, upper: $('#setUpper').checked,
           lower: $('#setLower').checked, digits: $('#setDigits').checked, symbols: $('#setSymbols').checked
         };
+        const selected = renderSelectionSummary();
+        scheduleAutosave();
+        return selected;
+      }
+      function renderSelectionSummary() {
         const selected = computeSelectedChars();
         $('#selectedCount').textContent = formatNumber(selected.chars.length);
         const warning = $('#unsupportedWarning');
@@ -1065,7 +1070,6 @@
         if (selected.truncated) messages.push(t('limitReached'));
         warning.hidden = messages.length === 0;
         $('#unsupportedWarningText').textContent = messages.join(' ');
-        scheduleAutosave();
         return selected;
       }
 
@@ -1143,7 +1147,7 @@
         document.title = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#brandName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
         $('#footerName').textContent = state.language === 'ja' ? APP_CONFIG.nameJa : APP_CONFIG.name;
-        updateSelectionSummary();
+        renderSelectionSummary();
         updateWritingUi();
         updateExportUi();
         setFontStatus(state.fontStatusMode, state.fontStatusKey);
