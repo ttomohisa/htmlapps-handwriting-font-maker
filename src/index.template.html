@@ -1147,7 +1147,7 @@
         const previousStep = state.step;
         state.step = step;
         document.body.dataset.activeStep = step;
-        $('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
+        document.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== step; });
         $$('.step-tab').forEach(button => button.setAttribute('aria-current', button.dataset.step === step ? 'step' : 'false'));
         $$('.mobile-tab').forEach(button => button.classList.toggle('active', button.dataset.step === step));
         if (step === 'write') { requestAnimationFrame(() => { resizeCanvas(); renderCanvas(); }); }
