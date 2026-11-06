@@ -1112,7 +1112,10 @@
         setFontStatus(state.fontStatusMode, state.fontStatusKey);
       }
 
-      const mobileLayout = window.matchMedia('(max-width: 720px)');
+      // A media-query stub also keeps non-browser regression harnesses usable.
+      const mobileLayout = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(max-width: 720px)')
+        : { matches: false, addEventListener() {} };
       function syncMobileDetails() {
         // Native details remain expanded on desktop; mobile starts with secondary panels closed.
         $('#mobilePreviewDetails').open = !mobileLayout.matches;
