@@ -26,10 +26,40 @@ async function checkWritingDock(page,label){
  assert.ok(r.nextTop>=r.navTop&&r.nextBottom<=r.navBottom+1&&r.nextWidth>=100&&r.previousWidth>=100,label+': previous/next fully visible '+JSON.stringify(r));
  return r;
 }
+async function checkEditToolbar(page,label){
+ const geometry=await page.evaluate(()=>{
+   const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+   const toolbar=rect('#writePanel .draw-toolbar'), canvas=rect('#drawCanvas');
+   const frame=rect('#writePanel .canvas-frame'), drawing=rect('#writePanel .drawing-card');
+   const navigation=rect('#writePanel .nav-row'),header=rect('.app-header');
+   return {
+     toolbarTop:toolbar.top,toolbarBottom:toolbar.bottom,
+     canvasTop:canvas.top,canvasBottom:canvas.bottom,
+     canvasWidth:canvas.width,canvasHeight:canvas.height,drawingWidth:drawing.width,
+     navTop:navigation.top,headerBottom:header.bottom,
+     buttons:['#undoButton','#clearGlyphButton','#redoButton'].map(selector=>{
+       const b=rect(selector);
+       const middle=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);
+       return {left:b.left,right:b.right,width:b.width,height:b.height,visible:middle?.closest(selector)!=null};
+     })
+   };
+ });
+ assert.ok(geometry.toolbarBottom<=geometry.canvasTop+2,label+': Undo/Clear/Redo precede canvas '+JSON.stringify(geometry));
+ assert.ok(geometry.canvasWidth>=geometry.drawingWidth*.94,label+': canvas retains its full width');
+ assert.ok(Math.abs(geometry.canvasWidth-geometry.canvasHeight)<3,label+': canvas remains square');
+ assert.ok(geometry.buttons.every(button=>button.width>70&&button.height>=40),label+': edit buttons remain comfortable touch targets');
+ assert.ok(geometry.buttons[0].right<geometry.buttons[1].left+2&&geometry.buttons[1].right<geometry.buttons[2].left+2,label+': no toolbar overlap');
+ if(geometry.navTop-geometry.headerBottom>=geometry.toolbarBottom-geometry.toolbarTop+14){
+   assert.ok(geometry.toolbarTop>=geometry.headerBottom-2&&geometry.toolbarBottom<=geometry.navTop+2,label+': toolbar clears header and fixed navigation');
+   assert.ok(geometry.buttons.every(button=>button.visible),label+': edit actions are not covered by overlays');
+ }
+ return geometry;
+}
 async function smoke(page,results,file){
  await page.locator('#setHiragana').uncheck();await page.locator('#customTextInput').fill('あの8B');await page.locator('#fontNameInput').fill('Synthetic Help Font');await page.locator('#startWritingButton').click();
  await page.waitForTimeout(120); // Allow the entry scroll to position the canvas.
  const geometry=await checkWritingDock(page,'Mobile writing');
+ await checkEditToolbar(page,'Mobile writing');
  if(geometry.canvasHeight<=geometry.navTop-geometry.headerBottom-18)
    assert.ok(geometry.canvasBottom<=geometry.navTop+12,'Canvas stays clear of writing actions on entry');
  await page.evaluate(()=>{
@@ -62,6 +92,14 @@ async function smoke(page,results,file){
    assert.equal(await page.locator('#nextIncompleteButton').isVisible(),true,'Unfinished shortcut retains its mobile slot');
    assert.equal(await page.locator('#nextWarningButton').isVisible(),true,'Review shortcut retains its mobile slot');
    await checkWritingDock(page,'Mobile drawing stroke '+i);
+   if(i===0){
+     // Button actions must remain operational without hiding or downsizing the canvas.
+     await page.locator('#undoButton').click();
+     assert.equal(await page.locator('#redoButton').isEnabled(),true,'Redo is available after Undo');
+     await page.locator('#redoButton').click();
+     assert.equal(await page.locator('#clearGlyphButton').isEnabled(),true,'Clear remains available after Redo');
+     await checkEditToolbar(page,'After mobile Undo/Redo');
+   }
    if(i<3)await page.locator('#nextCharButton').click();
  }
  await page.waitForFunction(()=>!document.querySelector('#downloadButton').disabled,null,{timeout:60000});
@@ -169,6 +207,7 @@ async function main() {
             else if(file==='dist/index.html' && language==='ja' && [320,393].includes(width)){
               await page.locator('#startWritingButton').click();
               await checkWritingDock(page,label+': short viewport');
+              await checkEditToolbar(page,label+': short viewport');
             }
             assert.deepEqual(errors, [], label + ': console errors');
             assert.deepEqual(requests, [], label + ': external runtime requests');
