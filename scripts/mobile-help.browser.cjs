@@ -12,8 +12,35 @@ async function prepareApp(page,width,label){
  assert.equal(await page.locator('.mobile-bottom-bar').isVisible(),width<=520,label+': workflow bar retained');
  if(width<=520)assert.ok(await page.locator('.mobile-bottom-bar').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;}),label+': functional bar fits viewport');
 }
+async function checkWritingDock(page,label){
+ const r=await page.evaluate(()=>{
+   const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+   const nav=rect('#writePanel .nav-row'), bar=rect('.mobile-bottom-bar');
+   const next=rect('#nextCharButton'), previous=rect('#previousCharButton');
+   const canvas=rect('#drawCanvas'), header=rect('.app-header');
+   return {navTop:nav.top,navBottom:nav.bottom,barTop:bar.top,
+     nextTop:next.top,nextBottom:next.bottom,nextWidth:next.width,previousWidth:previous.width,
+     canvasBottom:canvas.bottom,canvasHeight:canvas.height,headerBottom:header.bottom,viewport:innerHeight};
+ });
+ assert.ok(r.navTop>=0&&r.navBottom<=r.barTop+2,label+': actions sit above bottom tabs '+JSON.stringify(r));
+ assert.ok(r.nextTop>=r.navTop&&r.nextBottom<=r.navBottom+1&&r.nextWidth>=100&&r.previousWidth>=100,label+': previous/next fully visible '+JSON.stringify(r));
+ return r;
+}
 async function smoke(page,results,file){
  await page.locator('#setHiragana').uncheck();await page.locator('#customTextInput').fill('あの8B');await page.locator('#fontNameInput').fill('Synthetic Help Font');await page.locator('#startWritingButton').click();
+ await page.waitForTimeout(120); // Allow the entry scroll to position the canvas.
+ const geometry=await checkWritingDock(page,'Mobile writing');
+ if(geometry.canvasHeight<=geometry.navTop-geometry.headerBottom-18)
+   assert.ok(geometry.canvasBottom<=geometry.navTop+12,'Canvas stays clear of writing actions on entry');
+ await page.evaluate(()=>{
+   window.__mobileHiddenShortcutMutations=[];
+   const buttons=[document.querySelector('#nextIncompleteButton'),document.querySelector('#nextWarningButton')];
+   for(const button of buttons){
+     const observer=new MutationObserver(()=>{if(button.hidden)window.__mobileHiddenShortcutMutations.push(button.id);});
+     observer.observe(button,{attributes:true,attributeFilter:['hidden']});
+   }
+   window.__mobileDrawingDocumentY=document.querySelector('.drawing-title-row').getBoundingClientRect().top+window.scrollY;
+ });
  assert.equal(await page.locator('#mobileBackupDetails').getAttribute('open'),null,'Mobile backup starts collapsed');
  assert.equal(await page.locator('#mobilePreviewDetails').getAttribute('open'),null,'Mobile font check starts collapsed');
  const position=await page.evaluate(()=>{
@@ -32,9 +59,19 @@ async function smoke(page,results,file){
  for(let i=0;i<4;i++){
    const canvas=page.locator('#drawCanvas');await canvas.scrollIntoViewIfNeeded();const r=await canvas.boundingBox();
    await page.mouse.move(r.x+r.width*.3,r.y+r.height*.3);await page.mouse.down();await page.mouse.move(r.x+r.width*.65,r.y+r.height*.35,{steps:8});await page.mouse.move(r.x+r.width*.6,r.y+r.height*.7,{steps:8});await page.mouse.up();
+   assert.equal(await page.locator('#nextIncompleteButton').isVisible(),true,'Unfinished shortcut retains its mobile slot');
+   assert.equal(await page.locator('#nextWarningButton').isVisible(),true,'Review shortcut retains its mobile slot');
+   await checkWritingDock(page,'Mobile drawing stroke '+i);
    if(i<3)await page.locator('#nextCharButton').click();
  }
- await page.waitForFunction(()=>!document.querySelector('#downloadButton').disabled,null,{timeout:60000});await page.locator('#mobileTabExport').click();await page.locator('#outputFilename').fill('mobile-help-font');
+ await page.waitForFunction(()=>!document.querySelector('#downloadButton').disabled,null,{timeout:60000});
+ const stability=await page.evaluate(()=>({
+   hidden:window.__mobileHiddenShortcutMutations,
+   position:document.querySelector('.drawing-title-row').getBoundingClientRect().top+window.scrollY,
+   original:window.__mobileDrawingDocumentY
+ }));
+ assert.deepEqual(stability.hidden,[],'Writing never toggles mobile shortcut buttons to hidden');
+ assert.ok(Math.abs(stability.position-stability.original)<2,'Writing does not shift the drawing section');await page.locator('#mobileTabExport').click();await page.locator('#outputFilename').fill('mobile-help-font');
  const pending=page.waitForEvent('download');await page.locator('#downloadButton').click();const download=await pending;assert.equal(download.suggestedFilename(),'mobile-help-font.ttf');
  const target=path.join(results,file.includes('self-extract')?'synthetic-loader.ttf':'synthetic-readable.ttf');await download.saveAs(target);const bytes=fs.readFileSync(target);assert.equal(bytes.readUInt32BE(0),0x00010000);assert.ok(bytes.length>500);
  assert.equal(await page.evaluate(async data=>{const face=new FontFace('DownloadedSynthetic',new Uint8Array(data).buffer);await face.load();document.fonts.add(face);return face.status;},[...bytes]),'loaded');
@@ -62,6 +99,12 @@ async function main() {
             if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#languageButton').click();
             await page.locator('#languageButton').click();await page.locator('#languageButton').click();
             assert.equal(await page.locator('html').getAttribute('lang'),language,label+': repeated language toggles');
+            assert.equal(await page.locator('#heroTitle').textContent(),language==='ja'?'書いた文字をそのままフォントへ':'Turn your handwriting into a font',label+': clear heading');
+            assert.equal(await page.locator('.page-intro p').textContent(),language==='ja'
+              ? '画面に文字を手書きして、フォントを作れます。できたフォントはTTFファイルとして保存できます。'
+              : 'Draw letters or characters on the screen to create a font. Save it as a TTF file.',label+': plain-language introduction');
+            assert.equal(await page.locator('#customTextInput').getAttribute('placeholder'),language==='ja'?'例：ありがとう、またね！':'Example: Happy birthday!',label+': character example');
+            assert.equal(await page.locator('#reviewText').getAttribute('placeholder'),language==='ja'?'今日はいい天気です。':'Hello! Have a nice day.',label+': preview example');
             for(const id of ['buildVersion','builtAt','dependencyCount']){assert.equal(await page.locator('#'+id).count(),1,label+': unique metadata after toggles');assert.ok(!['','—','-'].includes((await page.locator('#'+id).textContent()).trim()),label+': populated metadata after toggles');}
             assert.equal(await page.locator('[data-i18n="localBadge"]').textContent(), language === 'en' ? 'Fully local processing' : '完全ローカル処理', label);
             assert.equal(await page.locator('.local-badge').isVisible(),width>720,label+': badge visibility follows desktop/mobile');
@@ -123,6 +166,10 @@ async function main() {
             await page.mouse.click(2, 1);
             assert.equal(await page.locator('#helpDialog').isVisible(), false, label + ': backdrop');
             if(file!=='handwriting-font-maker.html' && language==='ja' && width===360) await smoke(page,results,file);
+            else if(file==='dist/index.html' && language==='ja' && [320,393].includes(width)){
+              await page.locator('#startWritingButton').click();
+              await checkWritingDock(page,label+': short viewport');
+            }
             assert.deepEqual(errors, [], label + ': console errors');
             assert.deepEqual(requests, [], label + ': external runtime requests');
             console.log('PASS ' + label);
