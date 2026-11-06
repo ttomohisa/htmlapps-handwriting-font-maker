@@ -14,6 +14,21 @@ async function prepareApp(page,width,label){
 }
 async function smoke(page,results,file){
  await page.locator('#setHiragana').uncheck();await page.locator('#customTextInput').fill('あの8B');await page.locator('#fontNameInput').fill('Synthetic Help Font');await page.locator('#startWritingButton').click();
+ assert.equal(await page.locator('#mobileBackupDetails').getAttribute('open'),null,'Mobile backup starts collapsed');
+ assert.equal(await page.locator('#mobilePreviewDetails').getAttribute('open'),null,'Mobile font check starts collapsed');
+ const position=await page.evaluate(()=>{
+   const rect=id=>document.querySelector(id).getBoundingClientRect();
+   return [rect('#drawCanvas').top,rect('#mobilePreviewDetails > summary').top,rect('#mobileBackupDetails > summary').top];
+ });
+ assert.ok(position[0]<position[1]&&position[1]<position[2], 'Drawing precedes preview and backup on mobile');
+ await page.locator('#mobileBackupDetails > summary').click();
+ assert.equal(await page.locator('#saveProjectFileButtonWrite').isVisible(),true,'Backup action reachable');
+ await page.locator('#mobileBackupDetails > summary').click();
+ await page.locator('#mobilePreviewDetails > summary').click();
+ assert.equal(await page.locator('#preview12').isVisible(),true,'Generated font sizes reachable');
+ await page.locator('#mobilePreviewDetails > summary').click();
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Writing layout has no horizontal overflow');
+ if(file==='dist/index.html')await page.screenshot({path:path.join(results,'mobile-writing-ja-360.png')});
  for(let i=0;i<4;i++){
    const canvas=page.locator('#drawCanvas');await canvas.scrollIntoViewIfNeeded();const r=await canvas.boundingBox();
    await page.mouse.move(r.x+r.width*.3,r.y+r.height*.3);await page.mouse.down();await page.mouse.move(r.x+r.width*.65,r.y+r.height*.35,{steps:8});await page.mouse.move(r.x+r.width*.6,r.y+r.height*.7,{steps:8});await page.mouse.up();
@@ -49,7 +64,8 @@ async function main() {
             assert.equal(await page.locator('html').getAttribute('lang'),language,label+': repeated language toggles');
             for(const id of ['buildVersion','builtAt','dependencyCount']){assert.equal(await page.locator('#'+id).count(),1,label+': unique metadata after toggles');assert.ok(!['','—','-'].includes((await page.locator('#'+id).textContent()).trim()),label+': populated metadata after toggles');}
             assert.equal(await page.locator('[data-i18n="localBadge"]').textContent(), language === 'en' ? 'Fully local processing' : '完全ローカル処理', label);
-            assert.ok(await page.locator('.local-badge').evaluate(el => {
+            assert.equal(await page.locator('.local-badge').isVisible(),width>720,label+': badge visibility follows desktop/mobile');
+            if(width>720)assert.ok(await page.locator('.local-badge').evaluate(el => {
               const box = el.getBoundingClientRect();
               const range = document.createRange();
               range.selectNodeContents(el.querySelector('[data-i18n="localBadge"]'));
