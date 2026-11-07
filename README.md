@@ -147,6 +147,12 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-
 
 This builds and verifies both release variants, runs the dependency-free handwriting, modal-layout contract, and packaging regression suites, and checks exact root-download parity. The modal contracts check source/CSS structure; real scrolling, bounds, and native dialog input still need browser verification. The existing CI workflows run the same checks. To check already-built readable files without rebuilding or repairing them, run `node scripts/test-packaging.cjs --verify-output`; a stale or missing root alias fails.
 
+### GitHub Releases
+
+To publish a new version, update the version in `app.config.json` and add `.github/release-notes/vX.Y.Z.md` in a pull request. After you merge it into `main`, `.github/workflows/publish-release.yml` rebuilds and verifies the standalone app. Only then does it create the `vX.Y.Z` tag at the merged commit and publish a GitHub Release. The PR itself and failed builds cannot publish a release.
+
+Each release includes the readable standalone HTML, self-extracting HTML, a ZIP with documentation/license/source, and `SHA256SUMS.txt`. Rerunning a completed release does not duplicate it, and an existing tag cannot be moved to another commit. PR CI also verifies asset packaging before merge.
+
 ### Dependencies
 
 The app has no third-party runtime dependencies. `dependencies.json` and `dependencies.lock.json` remain empty.
