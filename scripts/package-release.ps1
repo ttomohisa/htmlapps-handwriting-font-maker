@@ -55,7 +55,7 @@ Copy-Item -LiteralPath $readable -Destination (Join-Path $bundleRoot "handwritin
 Copy-Item -LiteralPath $selfExtract -Destination (Join-Path $bundleRoot "handwriting-font-maker.self-extract.html")
 
 $distributionFiles = @(
-  "README-FIRST.txt", "README.ja.md", "README.md", "LICENSE",
+  "README.ja.md", "README.md", "LICENSE",
   "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "APP_SPEC.md", "VERIFY_OFFLINE.md",
   "app.config.json", "dependencies.json", "dependencies.lock.json",
   "build-standalone.ps1", "build-standalone.bat",
