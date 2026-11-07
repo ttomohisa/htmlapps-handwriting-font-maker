@@ -148,6 +148,12 @@ powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-
 
 通常版・自己解凍版をビルドして検証し、追加パッケージ不要の手書き動作・ダイアログ配置条件・配布物の回帰テストと、ルートのダウンロード用HTMLの完全一致チェックを行います。配置条件のテストはソースとCSSの構造を確認するもので、実際のスクロール・画面内の位置・ネイティブダイアログへの入力は別途ブラウザで確認します。既存のCIも同じ検証を実行します。ビルドし直さず配布物の一致だけを確認するには `node scripts/test-packaging.cjs --verify-output` を使います。ルートのHTMLが古い場合や存在しない場合は失敗します。
 
+### GitHub Release
+
+新しいバージョンを公開するときは、`app.config.json` のバージョンと `.github/release-notes/vX.Y.Z.md` を更新したPRを `main` にマージします。マージ時に `.github/workflows/publish-release.yml` が動き、検証に成功した場合だけ、そのコミットへ `vX.Y.Z` タグを付けてGitHub Releaseを公開します。マージ前のPRや検証失敗時にはタグ・Releaseを作りません。
+
+通常版の単一HTML、自己展開版、ZIP（説明書・ライセンス・ソースを同梱）、`SHA256SUMS.txt` を添付します。リリース済みのタグは再実行で重複作成せず、タグだけ存在する場合も別コミットを上書きしません。配布物の生成はPRのCIでも事前確認します。
+
 ### 外部依存
 
 アプリ本体にサードパーティーのランタイム依存はありません。`dependencies.json` と `dependencies.lock.json` は空です。
