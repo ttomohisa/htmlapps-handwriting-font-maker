@@ -86,7 +86,7 @@
     .brand-copy { min-width: 0; }
     .brand-name { margin: 0; font-size: 17px; line-height: 1.2; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .brand-meta { margin: 2px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .version-badge { display: inline-flex; align-items: center; margin-left: 7px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface-muted); font-size: 10px; font-weight: 650; vertical-align: 2px; }
+    .version-badge { display: inline-flex; align-items: center; margin-left: 7px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--surface-muted); font-size: 11px; font-weight: 650; vertical-align: 2px; }
     .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
     .language-button { padding: 5px 1px; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 750; cursor: pointer; }
     .language-button:hover { color: var(--text); }
@@ -111,7 +111,7 @@
     .page-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 0 2px 18px; }
     .page-intro h1 { margin: 0; font-size: clamp(21px, 3vw, 27px); line-height: 1.3; letter-spacing: -.025em; }
     .page-intro p { margin: 5px 0 0; max-width: 760px; color: var(--muted); font-size: 13px; }
-    .local-badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; margin-top: 3px; padding: 7px 10px; border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line)); border-radius: 999px; color: var(--accent); background: var(--accent-soft); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .local-badge { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; margin-top: 3px; padding: 7px 0; border: 0; border-radius: 0; color: var(--accent); background: transparent; font-size: 12px; font-weight: 500; white-space: nowrap; }
     .local-badge svg { width: 15px; height: 15px; display: block; }
     .shell { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-sm); }
     .stepper { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; padding: 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-muted); }
@@ -282,7 +282,7 @@
     .build-item { padding: 9px 10px; border-radius: 9px; background: var(--surface-muted); }
     .build-item span { display: block; color: var(--muted); font-size: 10px; }
     .build-item strong { display: block; margin-top: 2px; font-size: 12px; overflow-wrap: anywhere; }
-    footer { width: min(1180px, 100%); margin: 0 auto; padding: 0 clamp(14px, 2.8vw, 30px) 28px; color: var(--muted); font-size: 11px; text-align: center; }
+    footer { width: min(1180px, 100%); margin: 0 auto; padding: 0 clamp(14px, 2.8vw, 30px) 28px; color: var(--muted); font-size: 12px; text-align: left; }
     .app-toast { position: fixed; z-index: 80; left: 50%; bottom: 20px; display: flex; align-items: center; gap: 12px; max-width: min(440px, calc(100vw - 36px)); padding: 10px 12px 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); opacity: 0; transform: translate(-50%, 12px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
     .app-toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
     .app-toast-message { min-width: 0; flex: 1 1 auto; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
@@ -310,6 +310,7 @@
     .app-confirm-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px 13px; border-bottom: 1px solid var(--line); }
     .app-confirm-title { margin: 0; font-size: 17px; }
     .app-confirm-close { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
+    .dialog-close { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 9px; background: transparent; cursor: pointer; }
     .app-confirm-close:hover { background: var(--surface-hover); }
     .app-confirm-close svg { width: 19px; height: 19px; }
     .app-confirm-body { padding: 18px; }
@@ -790,7 +791,7 @@
   <dialog class="app-confirm-dialog" id="appConfirmDialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
     <div class="app-confirm-header">
       <h2 class="app-confirm-title" id="appConfirmTitle">確認</h2>
-      <button class="app-confirm-close" id="appConfirmClose" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button class="dialog-close" id="appConfirmClose" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg></button>
     </div>
     <div class="app-confirm-body">
       <p class="app-confirm-message" id="appConfirmMessage"></p>
@@ -804,7 +805,7 @@
   <dialog class="glyph-picker-dialog" id="glyphPickerDialog" aria-labelledby="glyphPickerTitle">
     <div class="dialog-header">
       <h2 id="glyphPickerTitle" data-i18n="characterList">文字一覧</h2>
-      <button class="icon-button" id="closeGlyphPickerButton" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button class="dialog-close" id="closeGlyphPickerButton" type="button" data-i18n-aria-label="close" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg></button>
     </div>
     <div class="glyph-picker-body">
       <div class="glyph-filters" id="glyphPickerFilters" role="group" data-i18n-aria-label="filterCharacters" aria-label="文字の絞り込み">
@@ -820,7 +821,7 @@
   <dialog id="helpDialog" aria-labelledby="helpTitle">
     <div class="dialog-header">
       <h2 id="helpTitle" data-i18n="helpTitle">使い方と注意事項</h2>
-      <button class="icon-button" id="closeHelpButton" type="button" data-i18n-title="close" data-i18n-aria-label="close" title="閉じる" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+      <button class="dialog-close" id="closeHelpButton" type="button" data-i18n-title="close" data-i18n-aria-label="close" title="閉じる" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12"/><path d="M18 6 6 18"/></svg></button>
     </div>
     <div class="dialog-body">
       <!-- APP:HELP:BEGIN Handwriting Font Maker help. -->
