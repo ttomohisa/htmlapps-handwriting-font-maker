@@ -1,0 +1,116 @@
+name: Publish standalone GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - app.config.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: handwriting-font-maker-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the merged main revision
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check version, release notes and existing tag
+        id: release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $app = Get-Content -LiteralPath 'app.config.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+          $version = [string]$app.version
+          if ($version -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+            throw 'Only stable SemVer versions can be released.'
+          }
+          $tag = "v$version"
+          $notes = ".github/release-notes/$tag.md"
+          if (-not (Test-Path -LiteralPath $notes -PathType Leaf)) {
+            throw "Missing release notes: $notes"
+          }
+
+          # A rerun must not create a duplicate release or re-upload immutable assets.
+          $existingRelease = & gh release view $tag --json tagName,isDraft --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            $found = $existingRelease | ConvertFrom-Json
+            if ($found.isDraft) {
+              throw "Release $tag exists as a draft. Inspect its assets before resuming; do not silently publish a partial release."
+            }
+            Write-Host "Release $tag already exists. Nothing to publish."
+            "create=false" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            exit 0
+          }
+
+          # If release creation was interrupted after the tag appeared, only resume
+          # when that tag points to this exact validated main commit.
+          $existingTag = @(git tag --list $tag)
+          if ($existingTag.Count -gt 0) {
+            $tagCommit = (git rev-list -n 1 $tag).Trim()
+            if ($tagCommit -ne $env:GITHUB_SHA) {
+              throw "Tag $tag already points to $tagCommit rather than $env:GITHUB_SHA."
+            }
+          }
+          "create=true" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "tag=$tag" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "version=$version" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "notes=$notes" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Build and verify standalone HTML
+        if: steps.release.outputs.create == 'true'
+        shell: pwsh
+        run: ./scripts/check-repository.ps1
+
+      - name: Package and verify downloadable release assets
+        if: steps.release.outputs.create == 'true'
+        shell: pwsh
+        run: |
+          ./scripts/package-release.ps1 -OutputDirectory "$env:RUNNER_TEMP/release-assets"
+
+      - name: Create version tag and GitHub Release
+        if: steps.release.outputs.create == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_NOTES: ${{ steps.release.outputs.notes }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $folder = Join-Path $env:RUNNER_TEMP 'release-assets'
+          $files = @(Get-ChildItem -LiteralPath $folder -File | Sort-Object Name | ForEach-Object { $_.FullName })
+          if ($files.Count -ne 4) { throw "Expected exactly four release assets, found $($files.Count)." }
+          # gh creates the lightweight version tag at the specified main commit if
+          # missing, then uploads all assets before publishing the Release.
+          & gh release create $env:RELEASE_TAG @files --title "Handwriting Font Maker $env:RELEASE_TAG" --notes-file $env:RELEASE_NOTES --target $env:GITHUB_SHA --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw "GitHub Release creation failed." }
+          $published = & gh release view $env:RELEASE_TAG --json url,isDraft,assets --repo $env:GITHUB_REPOSITORY
+          if ($LASTEXITCODE -ne 0) { throw "Release verification failed." }
+          $result = $published | ConvertFrom-Json
+          if ($result.isDraft -or $result.assets.Count -ne 4) {
+            throw "Release is still a draft or has incomplete assets."
+          }
+          "Published $env:RELEASE_TAG with four release assets: $($result.url)" |
+            Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append

@@ -40,6 +40,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check-repository.ps1
 
+      - name: Verify release asset packaging without publishing
+        shell: pwsh
+        run: ./scripts/package-release.ps1 -OutputDirectory "$env:RUNNER_TEMP/release-check"
+
       - name: Upload standalone artifact
         uses: actions/upload-artifact@v7
         with:

@@ -1,5 +1,15 @@
 # APP_SPEC.md
 
+## v1.1.0 — Mobile handwriting workflow
+
+- Refine smartphone navigation so character choice, drawing, and TTF export remain distinct steps.
+- Keep the full-size, square canvas while placing Undo / Clear / Redo above it and Previous / Next above the mobile bottom tabs.
+- Keep the Next unfinished and Review shortcuts in stable layout slots while their availability changes.
+- Move mobile font-check details and project backup into collapsible sections without hiding review warnings or removing backup actions.
+- Hide the local-processing badge on narrow screens and simplify Japanese and English examples and introduction copy.
+- Preserve font geometry, local-only processing, undo/redo, project data schema v1, and the desktop workflow.
+
+
 ## v1.0.4 — Reachable Help and responsive handwriting
 
 - Allocate Help's scrolling body from the dialog's actual remaining height, including its 760px desktop cap, and keep its header/Close button visible.
@@ -22,7 +32,7 @@
 ## 1. Product identity
 
 - **Name:** Handwriting Font Maker / 手書きフォントメーカー
-- **Version:** 1.0.4
+- **Version:** 1.1.0
 - **One-sentence purpose:** Write selected characters in the browser and export them as a TrueType font without uploading handwriting data.
 - **Primary users:** People who want a small personal handwriting font for documents, labels, prototypes, or web experiments.
 - **Release artifacts:** `dist/index.html` and `dist/index.self-extract.html`, with the root `handwriting-font-maker.html` generated as an exact readable-download alias

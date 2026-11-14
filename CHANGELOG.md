@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 1.1.0 - 2026-11-07
+
+- Rework the smartphone font-making workflow with a compact character selection screen, more prominent writing canvas, and accessible project-backup and font-check sections.
+- Keep Undo / Clear / Redo above the unchanged square canvas, with Previous / Next persistently visible above the mobile page tabs.
+- Prevent layout jumps when Next unfinished / Review shortcuts change availability during handwriting or font checks.
+- Hide the mobile local-processing badge, simplify introductory wording and example text in Japanese and English, and retain desktop behavior.
+- Add browser regression checks for mobile controls, viewport overlap, no horizontal overflow, and drawing through TTF export.
+- Prepare verified, versioned GitHub Release assets and automatic tag/release publishing only after merge to main.
+
 - Hide the informational mobile footer and move the existing build metadata to the end of Help, preserving functional actions and privacy wording.
 
 ## 1.0.4 - 2026-10-13
